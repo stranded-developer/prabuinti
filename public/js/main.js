@@ -18,15 +18,141 @@
     a.addEventListener('click', () => {
       menu.classList.remove('open');
       mobile.classList.remove('open');
+      menu.setAttribute('aria-expanded', false);
     });
   });
 })();
 
-/* === Homepage Data + Collage + Portfolio + Alderon ===
- * One fetch drives all dynamic homepage content.
- * Hero collage: 3 independent cells cycling through image pool.
- * Transition: clip-path inset(100%→0) — Emil's reveal pattern.
- */
+/* === Hero Title — word-by-word clip reveal === */
+(function initHeroTitle() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const title = document.querySelector('.hero-title');
+  if (!title) return;
+
+  // Walk text nodes and wrap each word
+  function wrapWords(node, delayStart, delayStep) {
+    let delay = delayStart;
+    const children = Array.from(node.childNodes);
+    node.innerHTML = '';
+
+    children.forEach(child => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const words = child.textContent.split(/(\s+)/);
+        words.forEach(part => {
+          if (!part.trim()) {
+            node.appendChild(document.createTextNode(part));
+          } else {
+            const wrapper = document.createElement('span');
+            wrapper.className = 'word';
+            const inner = document.createElement('span');
+            inner.className = 'word-inner';
+            inner.style.animationDelay = delay + 'ms';
+            inner.textContent = part;
+            wrapper.appendChild(inner);
+            node.appendChild(wrapper);
+            delay += delayStep;
+          }
+        });
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        // Preserve em tags but wrap their words too
+        const clone = child.cloneNode(false);
+        const words = child.textContent.split(/(\s+)/);
+        words.forEach(part => {
+          if (!part.trim()) {
+            clone.appendChild(document.createTextNode(part));
+          } else {
+            const inner = document.createElement('span');
+            inner.className = 'word-inner';
+            inner.style.animationDelay = delay + 'ms';
+            inner.style.display = 'inline-block';
+            inner.textContent = part;
+            const wrapper = document.createElement('span');
+            wrapper.className = 'word';
+            wrapper.style.display = 'inline-block';
+            wrapper.style.overflow = 'hidden';
+            wrapper.style.verticalAlign = 'bottom';
+            wrapper.appendChild(inner);
+            clone.appendChild(wrapper);
+            delay += delayStep;
+          }
+        });
+        node.appendChild(clone);
+      }
+    });
+    return delay;
+  }
+
+  wrapWords(title, 180, 80);
+})();
+
+/* === Counter animation for hero stats === */
+(function initCounters() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const stats = document.querySelectorAll('[data-count]');
+  if (!stats.length) return;
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const target = parseInt(el.dataset.count, 10);
+      const suffix = el.textContent.includes('+') ? '+' : '';
+      const duration = 1200;
+      const start = performance.now();
+
+      function tick(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = Math.floor(eased * target);
+        el.textContent = current + suffix;
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+      io.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+
+  stats.forEach(el => io.observe(el));
+})();
+
+/* === Stagger Reveal for grouped children === */
+(function initStagger() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Groups: pillars, about-cards, testimonials, projects
+  const staggerGroups = [
+    { parent: '.pillars-grid', child: '.pillar', base: 0, step: 80 },
+    { parent: '.about-cards', child: '.about-card', base: 0, step: 70 },
+    { parent: '.testimonials-grid', child: '.testimonial', base: 0, step: 60 },
+    { parent: '.projects-grid', child: '.project-card', base: 0, step: 70 },
+  ];
+
+  staggerGroups.forEach(({ parent, child, base, step }) => {
+    const container = document.querySelector(parent);
+    if (!container) return;
+    const items = container.querySelectorAll(child);
+    items.forEach((item, i) => {
+      item.classList.add('stagger-child');
+      item.style.transitionDelay = (base + i * step) + 'ms';
+    });
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const children = container.querySelectorAll('.stagger-child');
+        children.forEach(c => c.classList.add('visible'));
+        io.unobserve(container);
+      });
+    }, { threshold: 0.08, rootMargin: '-24px 0px' });
+
+    io.observe(container);
+  });
+})();
+
+/* === Homepage Data + Collage + Portfolio + Alderon === */
 (async function initHomepage() {
   const DEFAULT_IMAGES = [
     '/images/hero/kokoh_cover-01.png',
@@ -48,13 +174,13 @@
     }
   } catch {}
 
-  // --- Alderon featured image ---
+  // Alderon featured image
   if (hp.alderonImage) {
     const img = document.getElementById('alderonFeaturedImg');
     if (img) img.src = hp.alderonImage;
   }
 
-  // --- Portfolio cards ---
+  // Portfolio cards
   hp.portfolio.forEach((item, i) => {
     const card  = document.getElementById('portfolioCard' + i);
     const label = document.getElementById('portfolioLabel' + i);
@@ -74,14 +200,14 @@
     }
   });
 
-  // --- Hero collage ---
+  // Hero collage
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const images    = hp.heroImages;
-  const cellIds   = ['collageCell0', 'collageCell1', 'collageCell2'];
-  const startIdx  = [0, Math.min(3, images.length - 1), Math.min(1, images.length - 1)];
-  const intervals = [2000, 1600, 2400]; // faster cycling
-  const delays    = [800,  1500, 2200];
+  const images   = hp.heroImages;
+  const cellIds  = ['collageCell0', 'collageCell1', 'collageCell2'];
+  const startIdx = [0, Math.min(3, images.length - 1), Math.min(1, images.length - 1)];
+  const intervals = [2200, 1800, 2600];
+  const delays    = [900,  1600, 2400];
 
   const cells = cellIds.map((id, i) => ({
     el:      document.getElementById(id),
@@ -108,16 +234,14 @@
     top.classList.remove('reveal');
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        top.classList.add('reveal');
-      });
+      requestAnimationFrame(() => top.classList.add('reveal'));
     });
 
     setTimeout(() => {
       bg.src = images[nextIdx];
       top.classList.remove('reveal');
       cell.current = nextIdx;
-    }, 900);
+    }, 950);
   }
 
   cells.forEach((cell, i) => {
@@ -130,8 +254,8 @@
 
 /* === Products === */
 (async function initProducts() {
-  const grid      = document.getElementById('productsGrid');
-  const countEl   = document.getElementById('productsCount');
+  const grid         = document.getElementById('productsGrid');
+  const countEl      = document.getElementById('productsCount');
   const catContainer = document.getElementById('categories');
 
   const MOBILE_LIMIT = 8;
@@ -141,11 +265,10 @@
     const res = await fetch('/api/products');
     products  = await res.json();
   } catch {
-    grid.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Gagal memuat produk.</p>';
+    grid.innerHTML = '<p style="color:var(--text-3);font-size:14px;padding:24px 0;">Gagal memuat produk.</p>';
     return;
   }
 
-  // Categories — keep Alderon uPVC last so it appears at end
   const catOrder = ['Semua','Roofing & Cladding','Floor Deck','Roof Truss','Fiber Glass','Genteng','Insulasi','Wiremesh','Alderon uPVC'];
   const catSet   = new Set(products.map(p => p.category));
   const categories = ['Semua', ...catOrder.slice(1).filter(c => catSet.has(c)), ...[...catSet].filter(c => !catOrder.includes(c))];
@@ -168,16 +291,15 @@
     countEl.textContent = list.length + ' produk';
     grid.innerHTML = '';
 
-    // Remove old show-more button if any
     const oldBtn = document.getElementById('showMoreBtn');
     if (oldBtn) oldBtn.remove();
 
     list.forEach((p, i) => {
       const card = document.createElement('div');
-      card.className = 'product-card' + (p.category === 'Alderon uPVC' ? ' product-card--alderon' : '');
-      card.style.transitionDelay = Math.min(i * 35, 280) + 'ms';
+      card.className = 'product-card';
+      // stagger delay capped at 320ms
+      card.style.transitionDelay = Math.min(i * 32, 320) + 'ms';
 
-      // On mobile, hide cards beyond MOBILE_LIMIT — revealed via show-more
       if (i >= MOBILE_LIMIT) card.classList.add('hidden-mobile');
 
       const imgHtml = p.image
@@ -196,7 +318,6 @@
       requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
     });
 
-    // Show-more button for mobile (CSS only shows it on ≤480px)
     if (list.length > MOBILE_LIMIT) {
       const remaining = list.length - MOBILE_LIMIT;
       const btn = document.createElement('button');
@@ -215,7 +336,7 @@
   }
 })();
 
-/* === FAQ === */
+/* === FAQ — accordion with one-open-at-a-time === */
 (function initFAQ() {
   document.querySelectorAll('.faq-item').forEach(item => {
     item.querySelector('.faq-question').addEventListener('click', () => {
@@ -228,11 +349,16 @@
 
 /* === Scroll Reveal === */
 (function initReveal() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    return;
+  }
+
   const io = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
     });
-  }, { threshold: 0.08, rootMargin: '-32px 0px' });
+  }, { threshold: 0.07, rootMargin: '-28px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 })();

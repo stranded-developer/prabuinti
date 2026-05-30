@@ -46,7 +46,7 @@ if (process.env.FIREBASE_PRIVATE_KEY) {
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
     const { getFirestore } = require('firebase-admin/firestore');
-    _db     = getFirestore(admin.app(), '-default-');
+    _db     = getFirestore();
     _bucket = admin.storage().bucket();
     console.log('  Firebase: Firestore + Storage aktif');
   } catch (e) {
@@ -452,7 +452,7 @@ app.post('/api/otp/send', async (req, res) => {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     otpStore.set(normalized, { otp, docId: Number(docId), expires: Date.now() + 5 * 60_000, attempts: 0, lastSent: Date.now() });
-    await sendWhatsApp(normalized, `Kode OTP unduhan dokumen Inti Atap Anda:\n\n*${otp}*\n\nBerlaku 5 menit. Jangan bagikan kode ini ke siapapun.`);
+    await sendWhatsApp(normalized, `Kode OTP unduhan dokumen Prabu Inti Anda:\n\n*${otp}*\n\nBerlaku 5 menit. Jangan bagikan kode ini ke siapapun.`);
     res.json({ ok: true, dev: !FONNTE_TOKEN });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -554,7 +554,7 @@ if (USE_FB) seedFirestore().catch(console.error);
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`\n  Inti Atap berjalan di http://localhost:${PORT}`);
+    console.log(`\n  Prabu Inti berjalan di http://localhost:${PORT}`);
     console.log(`  Admin panel : http://localhost:${PORT}/admin`);
     console.log(`  Dokumen     : http://localhost:${PORT}/dokumen`);
     console.log(`  Mode        : ${USE_FB ? 'Firebase (Firestore + Storage)' : 'Local files (dev)'}`);
