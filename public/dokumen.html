@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumen — PT. Inti Atap Suksesindo</title>
+  <meta name="description" content="Unduh dokumen resmi PT. Inti Atap Suksesindo.">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .doc-page { padding: 120px 0 96px; min-height: 100svh; }
+    .doc-page-header { margin-bottom: 48px; }
+
+    .doc-list { display: flex; flex-direction: column; gap: 12px; max-width: 680px; }
+
+    .doc-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+    }
+    .doc-card:hover {
+      border-color: var(--border-2);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+
+    .doc-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--accent-bg);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .doc-icon svg { width: 22px; height: 22px; color: var(--accent); }
+
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; margin-bottom: 3px; }
+    .doc-meta  { font-size: 12px; color: var(--text-3); display: flex; gap: 12px; flex-wrap: wrap; }
+    .doc-desc  { font-size: 13px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+
+    .doc-btn {
+      flex-shrink: 0;
+      height: 38px;
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--r-sm);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 150ms var(--ease-out), transform 160ms var(--ease-out);
+    }
+    .doc-btn:hover  { background: var(--accent-dark); }
+    .doc-btn:active { transform: scale(0.97); }
+    .doc-btn svg { width: 14px; height: 14px; }
+
+    /* === OTP Modal === */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms var(--ease-out);
+    }
+    .modal-bg.open { opacity: 1; pointer-events: all; }
+
+    .otp-modal {
+      background: var(--bg-card);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 420px;
+      padding: 32px 28px;
+      transform: scale(0.96) translateY(10px);
+      transition: transform 250ms var(--ease-out);
+      position: relative;
+    }
+    .modal-bg.open .otp-modal { transform: scale(1) translateY(0); }
+
+    .otp-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 16px;
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 150ms var(--ease-out), color 150ms var(--ease-out);
+    }
+    .otp-close:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+    .otp-step { display: none; }
+    .otp-step.active { display: block; }
+
+    .otp-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-bg);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .otp-icon svg { width: 24px; height: 24px; color: var(--accent); }
+
+    .otp-title { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-bottom: 6px; }
+    .otp-sub   { font-size: 13px; color: var(--text-2); line-height: 1.55; margin-bottom: 24px; }
+    .otp-sub strong { color: var(--text); }
+
+    .otp-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-bottom: 8px;
+    }
+    .otp-phone-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+      margin-bottom: 6px;
+    }
+    .otp-phone-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(140,100,34,0.12);
+    }
+    .otp-hint { font-size: 11px; color: var(--text-3); margin-bottom: 20px; }
+
+    /* OTP digit boxes */
+    .otp-digits {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+    .otp-digit {
+      width: 48px;
+      height: 56px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      caret-color: var(--accent);
+      transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+      -moz-appearance: textfield;
+    }
+    .otp-digit::-webkit-outer-spin-button,
+    .otp-digit::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .otp-digit:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(140,100,34,0.12);
+    }
+    .otp-digit.filled { border-color: var(--accent); }
+
+    .otp-resend {
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: center;
+      margin-bottom: 20px;
+      min-height: 20px;
+    }
+    .otp-resend button {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      display: none;
+    }
+    .otp-resend button.visible { display: inline; }
+
+    .otp-error {
+      font-size: 12px;
+      color: #dc2626;
+      background: #fee2e2;
+      border-radius: 7px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      display: none;
+      line-height: 1.4;
+    }
+    .otp-error.show { display: block; }
+
+    .otp-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 150ms var(--ease-out), transform 160ms var(--ease-out), opacity 150ms;
+    }
+    .otp-btn:hover  { background: var(--accent-dark); }
+    .otp-btn:active { transform: scale(0.97); }
+    .otp-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .otp-success {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .otp-success-icon { font-size: 40px; margin-bottom: 12px; }
+    .otp-success h3 { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .otp-success p  { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+    .doc-empty {
+      padding: 64px 0;
+      text-align: center;
+      color: var(--text-3);
+    }
+    .doc-empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .doc-empty p { font-size: 14px; font-weight: 500; }
+
+    @media (max-width: 600px) {
+      .doc-card { flex-wrap: wrap; }
+      .doc-btn  { width: 100%; justify-content: center; }
+      .otp-digit { width: 40px; height: 50px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="nav-logo-main">INTI ATAP</span>
+        <span class="nav-logo-sub">PT. Suksesindo · Tangerang</span>
+      </a>
+      <div class="nav-links">
+        <a href="/#produk">Produk</a>
+        <a href="/#proyek">Referensi</a>
+        <a href="/#tentang">Tentang</a>
+        <a href="/#faq">FAQ</a>
+        <a href="/dokumen" style="color:var(--accent);font-weight:700;">Dokumen</a>
+        <a href="/#kontak" class="nav-cta">Hubungi Kami</a>
+      </div>
+      <button class="nav-menu" id="navMenu" aria-label="Buka menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="/#produk">Produk</a>
+      <a href="/#proyek">Referensi Proyek</a>
+      <a href="/#tentang">Tentang Kami</a>
+      <a href="/#faq">FAQ</a>
+      <a href="/dokumen">Dokumen</a>
+      <a href="/#kontak">Hubungi Kami</a>
+    </div>
+  </nav>
+
+  <main class="doc-page">
+    <div class="container">
+      <div class="doc-page-header reveal">
+        <div class="section-label">Unduhan</div>
+        <h1 class="section-title">Dokumen</h1>
+        <p class="section-desc">Unduh dokumen resmi kami. Verifikasi nomor WhatsApp diperlukan untuk setiap unduhan.</p>
+      </div>
+      <div class="doc-list" id="docList">
+        <div class="doc-empty">
+          <div class="doc-empty-icon">📄</div>
+          <p>Memuat dokumen...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom" style="border-top:none;padding-top:0;">
+        <span class="footer-copy">&copy; 2024 PT. Inti Atap Suksesindo</span>
+        <a href="/" class="footer-copy" style="color:var(--accent);">← Kembali ke Beranda</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp Float -->
+  <a href="https://wa.me/6285833339997" class="wa-float" target="_blank" rel="noopener" aria-label="Chat WhatsApp">
+    <span class="wa-label">Hubungi via WhatsApp</span>
+    <span class="wa-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </span>
+  </a>
+
+  <!-- OTP Modal -->
+  <div class="modal-bg" id="modalBg" role="dialog" aria-modal="true" aria-labelledby="otpTitle">
+    <div class="otp-modal">
+      <button class="otp-close" id="otpClose" aria-label="Tutup">×</button>
+
+      <!-- Step 1: Phone -->
+      <div class="otp-step active" id="step1">
+        <div class="otp-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <h2 class="otp-title" id="otpTitle">Verifikasi Nomor</h2>
+        <p class="otp-sub">Masukkan nomor WhatsApp Anda. Kode OTP akan dikirim untuk mengunduh <strong id="docNameStep1"></strong>.</p>
+        <div class="otp-error" id="step1Error"></div>
+        <label class="otp-label" for="phoneInput">Nomor WhatsApp</label>
+        <input type="tel" id="phoneInput" class="otp-phone-input" placeholder="Contoh: 08123456789" inputmode="tel" autocomplete="tel">
+        <p class="otp-hint">Format: 08xx, tanpa spasi atau tanda hubung</p>
+        <button class="otp-btn" id="sendOtpBtn">Kirim Kode OTP</button>
+      </div>
+
+      <!-- Step 2: OTP -->
+      <div class="otp-step" id="step2">
+        <div class="otp-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </div>
+        <h2 class="otp-title">Masukkan Kode OTP</h2>
+        <p class="otp-sub" id="step2Sub">Kode 6 digit telah dikirim ke WhatsApp <strong id="phoneMasked"></strong>.</p>
+        <div class="otp-error" id="step2Error"></div>
+        <label class="otp-label" style="text-align:center;display:block;margin-bottom:14px;">Kode OTP</label>
+        <div class="otp-digits" id="otpDigits">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric" autocomplete="one-time-code">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric">
+          <input class="otp-digit" type="number" maxlength="1" min="0" max="9" inputmode="numeric">
+        </div>
+        <div class="otp-resend" id="otpResend">
+          <span id="resendTimer">Kirim ulang dalam <b id="resendCount">60</b>s</span>
+          <button id="resendBtn">Kirim ulang OTP</button>
+        </div>
+        <button class="otp-btn" id="verifyOtpBtn">Verifikasi &amp; Unduh</button>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div class="otp-step" id="step3">
+        <div class="otp-success">
+          <div class="otp-success-icon">✅</div>
+          <h3>Unduhan Dimulai</h3>
+          <p>Dokumen Anda sedang diunduh. Terima kasih telah menggunakan layanan PT. Inti Atap Suksesindo.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // --- Nav ---
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 20), { passive: true });
+    document.getElementById('navMenu').addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('navMobile').classList.toggle('open');
+    });
+    document.querySelectorAll('.nav-mobile a').forEach(a => a.addEventListener('click', () => {
+      document.getElementById('navMenu').classList.remove('open');
+      document.getElementById('navMobile').classList.remove('open');
+    }));
+
+    // --- Scroll reveal ---
+    const io = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } }), { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    // --- Load Documents ---
+    let currentDocId = null;
+
+    async function loadDocs() {
+      const list = document.getElementById('docList');
+      try {
+        const res  = await fetch('/api/documents');
+        const docs = await res.json();
+        if (!docs.length) {
+          list.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">📄</div><p>Belum ada dokumen tersedia.</p></div>`;
+          return;
+        }
+        list.innerHTML = '';
+        docs.forEach(doc => {
+          const card = document.createElement('div');
+          card.className = 'doc-card reveal';
+          card.innerHTML = `
+            <div class="doc-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="doc-info">
+              <div class="doc-title">${doc.title}</div>
+              ${doc.description ? `<div class="doc-desc">${doc.description}</div>` : ''}
+              <div class="doc-meta">
+                <span>PDF</span>
+                <span>${doc.size}</span>
+                <span>Diupload ${doc.uploadedAt}</span>
+              </div>
+            </div>
+            <button class="doc-btn" data-id="${doc.id}" data-title="${doc.title}">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Unduh
+            </button>`;
+          card.querySelector('.doc-btn').addEventListener('click', () => openModal(doc.id, doc.title));
+          list.appendChild(card);
+          requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
+        });
+      } catch {
+        list.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">⚠️</div><p>Gagal memuat dokumen.</p></div>`;
+      }
+    }
+    loadDocs();
+
+    // --- Modal ---
+    const modalBg = document.getElementById('modalBg');
+
+    function openModal(docId, docTitle) {
+      currentDocId = docId;
+      document.getElementById('docNameStep1').textContent = docTitle;
+      document.getElementById('phoneInput').value = '';
+      clearDigits();
+      showStep('step1');
+      hideError('step1Error');
+      hideError('step2Error');
+      modalBg.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => document.getElementById('phoneInput').focus(), 300);
+    }
+
+    function closeModal() {
+      modalBg.classList.remove('open');
+      document.body.style.overflow = '';
+      clearResendTimer();
+    }
+
+    document.getElementById('otpClose').addEventListener('click', closeModal);
+    modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function showStep(id) {
+      document.querySelectorAll('.otp-step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function hideError(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    // --- Step 1: Send OTP ---
+    document.getElementById('sendOtpBtn').addEventListener('click', sendOtp);
+    document.getElementById('phoneInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+
+    async function sendOtp() {
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) { showError('step1Error', 'Masukkan nomor WhatsApp Anda.'); return; }
+
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Mengirim...';
+      hideError('step1Error');
+
+      try {
+        const res  = await fetch('/api/otp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, docId: currentDocId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const masked = phone.replace(/(\d{3})\d+(\d{4})/, '$1****$2');
+          document.getElementById('phoneMasked').textContent = masked;
+          if (data.dev) {
+            document.getElementById('step2Sub').innerHTML = `Mode dev aktif. Lihat kode OTP di <strong>console/terminal server</strong>.`;
+          }
+          showStep('step2');
+          startResendTimer(phone);
+          setTimeout(() => document.querySelector('.otp-digit').focus(), 200);
+        } else {
+          showError('step1Error', data.error || 'Gagal mengirim OTP. Coba lagi.');
+        }
+      } catch {
+        showError('step1Error', 'Tidak dapat terhubung. Coba lagi.');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Kirim Kode OTP';
+    }
+
+    // --- OTP digit inputs ---
+    const digits = document.querySelectorAll('.otp-digit');
+
+    function clearDigits() {
+      digits.forEach(d => { d.value = ''; d.classList.remove('filled'); });
+    }
+
+    digits.forEach((d, i) => {
+      d.addEventListener('input', () => {
+        const v = d.value.replace(/\D/g, '').slice(-1);
+        d.value = v;
+        d.classList.toggle('filled', !!v);
+        if (v && i < digits.length - 1) digits[i + 1].focus();
+        if (getOTPValue().length === 6) verifyOtp();
+      });
+      d.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !d.value && i > 0) { digits[i - 1].focus(); digits[i - 1].value = ''; digits[i - 1].classList.remove('filled'); }
+      });
+      d.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+        text.split('').forEach((ch, j) => { if (digits[j]) { digits[j].value = ch; digits[j].classList.add('filled'); } });
+        if (text.length === 6) { digits[5].focus(); verifyOtp(); }
+      });
+    });
+
+    function getOTPValue() { return Array.from(digits).map(d => d.value).join(''); }
+
+    // --- Step 2: Verify OTP ---
+    document.getElementById('verifyOtpBtn').addEventListener('click', verifyOtp);
+
+    async function verifyOtp() {
+      const otp   = getOTPValue();
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (otp.length < 6) { showError('step2Error', 'Masukkan 6 digit kode OTP.'); return; }
+
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Memverifikasi...';
+      hideError('step2Error');
+
+      try {
+        const res  = await fetch('/api/otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, otp, docId: currentDocId })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          showStep('step3');
+          clearResendTimer();
+          window.location.href = '/api/download/' + data.token;
+          setTimeout(closeModal, 3000);
+        } else {
+          showError('step2Error', data.error || 'Kode salah. Coba lagi.');
+          clearDigits();
+          setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
+        }
+      } catch {
+        showError('step2Error', 'Tidak dapat terhubung. Coba lagi.');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Verifikasi & Unduh';
+    }
+
+    // --- Resend timer ---
+    let resendInterval = null;
+
+    function startResendTimer(phone) {
+      clearResendTimer();
+      let seconds = 60;
+      document.getElementById('resendCount').textContent = seconds;
+      document.getElementById('resendTimer').style.display = 'inline';
+      document.getElementById('resendBtn').classList.remove('visible');
+
+      resendInterval = setInterval(() => {
+        seconds--;
+        document.getElementById('resendCount').textContent = seconds;
+        if (seconds <= 0) {
+          clearResendTimer();
+          document.getElementById('resendTimer').style.display = 'none';
+          document.getElementById('resendBtn').classList.add('visible');
+        }
+      }, 1000);
+    }
+
+    function clearResendTimer() {
+      clearInterval(resendInterval);
+      resendInterval = null;
+    }
+
+    document.getElementById('resendBtn').addEventListener('click', async () => {
+      hideError('step2Error');
+      clearDigits();
+      showStep('step1');
+      document.getElementById('resendBtn').classList.remove('visible');
+    });
+  </script>
+</body>
+</html>

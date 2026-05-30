@@ -1,0 +1,25 @@
+node_modules/
+.env
+
+# macOS
+.DS_Store
+
+# Local dev data (Firebase is source of truth in production)
+data/
+uploads/*
+!uploads/.gitkeep
+docs/*
+!docs/.gitkeep
+
+# Not part of the deployable app
+old_site/
+references/
+
+# Claude Code
+skills-lock.json
+
+# One-time scripts
+seed.js
+
+# Firebase service account keys (sensitive — never commit)
+*-adminsdk-*.json
