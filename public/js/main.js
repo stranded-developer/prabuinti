@@ -262,10 +262,12 @@
   let products = [];
 
   try {
-    const res = await fetch('/api/products');
-    products  = await res.json();
-  } catch {
-    grid.innerHTML = '<p style="color:var(--text-3);font-size:14px;padding:24px 0;">Gagal memuat produk.</p>';
+    const res  = await fetch('/api/products');
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data)) throw new Error(data?.error || 'Server error');
+    products = data;
+  } catch (e) {
+    grid.innerHTML = `<p style="color:var(--text-3);font-size:14px;padding:24px 0;">Gagal memuat produk: ${e.message}</p>`;
     return;
   }
 
