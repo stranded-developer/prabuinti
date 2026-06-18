@@ -578,18 +578,139 @@
     .hp-img-slot:hover .hp-overlay { opacity: 1; }
     .hp-overlay-text { font-size: 12px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
 
-    .portfolio-slot {
+    /* video slot */
+    .hp-video-slot {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      max-width: 480px;
+      aspect-ratio: 16/9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: var(--bg);
+      overflow: hidden;
+      position: relative;
+      transition: border-color 150ms var(--ease), background 150ms var(--ease);
+    }
+    .hp-video-slot:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .hp-video-slot video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .hp-video-slot:hover .hp-overlay { opacity: 1; }
+    .hp-video-uploading {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* === Projects (Proyek) admin === */
+    .proj-card {
       background: var(--card);
       border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 12px;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
     }
-    .portfolio-slot:last-child { margin-bottom: 0; }
+    .proj-card-top {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+    .proj-card-top .form-group { flex: 1; margin: 0; }
+    .proj-imgs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .proj-img {
+      position: relative;
+      aspect-ratio: 4/3;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .proj-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .proj-img-del {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      transition: background 150ms var(--ease);
+    }
+    .proj-img-del:hover { background: var(--red, #c0392b); }
+    .proj-img-add {
+      aspect-ratio: 4/3;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--bg);
+      transition: border-color 150ms var(--ease), background 150ms var(--ease), color 150ms var(--ease);
+    }
+    .proj-img-add:hover { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+    .proj-img-add span { font-size: 22px; }
+    .proj-card-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .proj-uploading { opacity: 0.55; pointer-events: none; }
+
+    /* === Project picker (in product modal) === */
+    .proj-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--bg);
+    }
+    .proj-pick {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 140ms var(--ease);
+    }
+    .proj-pick:hover { background: var(--accent-bg); }
+    .proj-pick input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+    .proj-pick-thumb { width: 40px; height: 30px; border-radius: 6px; object-fit: cover; background: var(--card); flex-shrink: 0; }
+    .proj-pick-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .proj-pick-meta  { font-size: 11px; color: var(--text-3); }
+    .proj-picker-empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 8px; }
 
     @media (max-width: 500px) {
       .form-row-2 { grid-template-columns: 1fr; }
@@ -597,7 +718,6 @@
       .modal { padding: 20px; }
       .doc-admin-btns { flex-direction: column; }
       .hp-img-grid { grid-template-columns: repeat(2, 1fr); }
-      .portfolio-slot { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -639,6 +759,8 @@
       <div class="admin-tabs">
         <button class="admin-tab active" data-tab="tabBeranda">🏠 Beranda</button>
         <button class="admin-tab"        data-tab="tabProducts">📦 Produk</button>
+        <button class="admin-tab"        data-tab="tabProjects">🏗️ Proyek</button>
+        <button class="admin-tab"        data-tab="tabNews">📰 Berita</button>
         <button class="admin-tab"        data-tab="tabDocuments">📄 Dokumen</button>
       </div>
 
@@ -647,7 +769,7 @@
         <div class="admin-top">
           <div>
             <h1>Kelola Beranda</h1>
-            <p>Atur foto kolase, produk unggulan, dan portofolio halaman utama.</p>
+            <p>Atur video dan produk unggulan halaman utama.</p>
           </div>
           <button id="saveHomepageBtn" class="btn-sm btn-green" style="padding:10px 20px;font-size:14px;">
             💾 Simpan Perubahan
@@ -656,10 +778,10 @@
 
         <div class="hp-section">
           <div class="hp-section-hd">
-            <h2 class="hp-section-title">Foto Kolase Beranda</h2>
-            <p class="hp-section-sub">6 foto yang ditampilkan bergiliran di halaman utama. Klik untuk mengganti.</p>
+            <h2 class="hp-section-title">Video Beranda</h2>
+            <p class="hp-section-sub">Video MP4 yang diputar otomatis di halaman utama. Klik untuk mengganti. Maks. 100MB.</p>
           </div>
-          <div class="hp-img-grid" id="heroImgGrid"></div>
+          <div id="heroVideoSlot"></div>
         </div>
 
         <div class="hp-section">
@@ -668,14 +790,6 @@
             <p class="hp-section-sub">Foto yang tampil di bagian produk unggulan. Klik untuk mengganti.</p>
           </div>
           <div class="hp-img-grid" id="alderonImgGrid"></div>
-        </div>
-
-        <div class="hp-section">
-          <div class="hp-section-hd">
-            <h2 class="hp-section-title">Portofolio Proyek</h2>
-            <p class="hp-section-sub">3 proyek referensi yang tampil di halaman utama.</p>
-          </div>
-          <div id="portfolioSlots"></div>
         </div>
       </div>
 
@@ -690,7 +804,49 @@
             + Tambah Produk Baru
           </button>
         </div>
+
+        <!-- Category manager -->
+        <div id="catManager" style="background:var(--bg-card,#fff);border:1.5px solid var(--border,#e5e2db);border-radius:12px;padding:16px 18px;margin-bottom:22px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+            <strong style="font-size:14px;">🏷️ Kategori Produk</strong>
+            <span style="font-size:12px;color:var(--text-3,#9e9e9e);">Seret urutan dengan tombol ↑↓ · ubah nama akan ikut mengubah produk terkait</span>
+          </div>
+          <div id="catList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <input id="newCatName" type="text" placeholder="Nama kategori baru..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border,#e5e2db);border-radius:8px;font:inherit;">
+            <button id="addCatBtn" class="btn-sm btn-green" style="padding:8px 16px;font-size:13px;white-space:nowrap;">+ Tambah</button>
+          </div>
+        </div>
+
         <div class="product-grid" id="productGrid"></div>
+      </div>
+
+      <!-- Projects Tab -->
+      <div class="tab-panel" id="tabProjects">
+        <div class="admin-top">
+          <div>
+            <h1>Kelola Proyek</h1>
+            <p id="projSubtitle">Proyek referensi yang bisa ditautkan ke produk.</p>
+          </div>
+          <button id="addProjectBtn" class="btn-sm btn-green" style="padding:10px 20px;font-size:14px;">
+            + Tambah Proyek Baru
+          </button>
+        </div>
+        <div id="projectsList"></div>
+      </div>
+
+      <!-- News Tab -->
+      <div class="tab-panel" id="tabNews">
+        <div class="admin-top">
+          <div>
+            <h1>Kelola Berita</h1>
+            <p id="newsSubtitle">Berita terkini yang tampil di halaman utama.</p>
+          </div>
+          <button id="addNewsBtn" class="btn-sm btn-green" style="padding:10px 20px;font-size:14px;">
+            + Tambah Berita Baru
+          </button>
+        </div>
+        <div id="newsList"></div>
       </div>
 
       <!-- Documents Tab -->
@@ -763,19 +919,18 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="pCategory">Kategori</label>
-          <select id="pCategory">
-            <option>Floor Deck</option>
-            <option>Roofing &amp; Cladding</option>
-            <option>Metal Roof</option>
-            <option>Fiber Glass</option>
-            <option>Roof Truss</option>
-            <option>Genteng Pasir</option>
-          </select>
+          <select id="pCategory"></select>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label" for="pDesc">Deskripsi / Keterangan</label>
         <textarea id="pDesc" placeholder="Tulis keterangan singkat tentang produk ini..." style="min-height:90px;resize:vertical;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Proyek Terkait</label>
+        <p style="font-size:12px;color:var(--text-3);margin:-2px 0 10px;">Pilih proyek yang menggunakan produk ini. Tampil di halaman detail produk.</p>
+        <div id="pProjectsPicker" class="proj-picker"></div>
       </div>
 
       <div class="modal-actions">
@@ -864,12 +1019,135 @@
       try {
         const r = await fetch('/api/products');
         const products = await r.json();
+        adminProducts = products;
         document.getElementById('adminSubtitle').textContent = products.length + ' produk terdaftar';
         renderGrid(products);
       } catch {
         grid.innerHTML = '<p style="color:var(--red);">Gagal memuat produk.</p>';
       }
     }
+
+    // === Categories (managed dynamically; products pick from this list) ===
+    let categoriesState = [];
+
+    async function loadCategories() {
+      try {
+        const r = await fetch('/api/categories');
+        categoriesState = r.ok ? await r.json() : [];
+      } catch { categoriesState = []; }
+      renderCategoryManager();
+      populateCategorySelect();
+    }
+
+    function populateCategorySelect(selected) {
+      const sel = document.getElementById('pCategory');
+      if (!sel) return;
+      const cur = selected !== undefined ? selected : sel.value;
+      sel.innerHTML = '';
+      const names = categoriesState.map(c => c.name);
+      // Keep a product's existing category selectable even if it was removed
+      // from the managed list (so editing it doesn't silently change it).
+      if (cur && !names.includes(cur)) names.unshift(cur);
+      names.forEach(n => {
+        const o = document.createElement('option');
+        o.value = n; o.textContent = n;
+        sel.appendChild(o);
+      });
+      if (cur) sel.value = cur;
+    }
+
+    function renderCategoryManager() {
+      const list = document.getElementById('catList');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!categoriesState.length) {
+        list.innerHTML = '<p style="font-size:13px;color:var(--text-3,#9e9e9e);">Belum ada kategori.</p>';
+        return;
+      }
+      categoriesState.forEach((c, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--bg,#f8f6f2);border:1px solid var(--border,#e5e2db);border-radius:8px;padding:6px 10px;';
+        const name = document.createElement('span');
+        name.textContent = c.name;
+        name.style.cssText = 'flex:1;font-size:14px;font-weight:600;';
+        const mk = (label, title, fn, disabled) => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.textContent = label; b.title = title;
+          b.style.cssText = 'padding:4px 9px;font-size:13px;border:1px solid var(--border,#e5e2db);background:#fff;border-radius:6px;cursor:pointer;' + (disabled ? 'opacity:.35;pointer-events:none;' : '');
+          b.addEventListener('click', fn);
+          return b;
+        };
+        row.appendChild(name);
+        row.appendChild(mk('↑', 'Naikkan', () => reorderCategory(i, i - 1), i === 0));
+        row.appendChild(mk('↓', 'Turunkan', () => reorderCategory(i, i + 1), i === categoriesState.length - 1));
+        row.appendChild(mk('✏️', 'Ubah nama', () => renameCategory(c)));
+        row.appendChild(mk('🗑️', 'Hapus', () => deleteCategory(c)));
+        list.appendChild(row);
+      });
+    }
+
+    async function reorderCategory(from, to) {
+      if (to < 0 || to >= categoriesState.length) return;
+      const arr = categoriesState.slice();
+      const [m] = arr.splice(from, 1);
+      arr.splice(to, 0, m);
+      categoriesState = arr;
+      renderCategoryManager();
+      try {
+        await fetch('/api/categories', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ ids: arr.map(c => c.id) }),
+        });
+      } catch { showToast('Gagal menyimpan urutan', 'error'); }
+    }
+
+    async function addCategory() {
+      const input = document.getElementById('newCatName');
+      const name = input.value.trim();
+      if (!name) return;
+      try {
+        const r = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ name }),
+        });
+        if (r.ok) { input.value = ''; showToast('Kategori ditambahkan ✓', 'success'); await loadCategories(); }
+        else { const d = await r.json().catch(() => ({})); showToast(d.error || 'Gagal menambah kategori', 'error'); }
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    async function renameCategory(c) {
+      const name = prompt('Ubah nama kategori:', c.name);
+      if (name === null) return;
+      const trimmed = name.trim();
+      if (!trimmed || trimmed === c.name) return;
+      try {
+        const r = await fetch('/api/categories/' + c.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ name: trimmed }),
+        });
+        if (r.ok) { showToast('Kategori diubah ✓ (produk terkait ikut diperbarui)', 'success'); await loadCategories(); loadProducts(); }
+        else { const d = await r.json().catch(() => ({})); showToast(d.error || 'Gagal mengubah kategori', 'error'); }
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    async function deleteCategory(c) {
+      const inUse = adminProducts.filter(p => p.category === c.name).length;
+      const msg = inUse
+        ? `Hapus kategori "${c.name}"?\n\n${inUse} produk memakai kategori ini — produk tidak terhapus, tapi kehilangan tombol filternya.`
+        : `Hapus kategori "${c.name}"?`;
+      if (!confirm(msg)) return;
+      try {
+        const r = await fetch('/api/categories/' + c.id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) { showToast('Kategori dihapus ✓', 'success'); await loadCategories(); }
+        else showToast('Gagal menghapus kategori', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    document.getElementById('addCatBtn').addEventListener('click', addCategory);
+    document.getElementById('newCatName').addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); });
 
     function renderGrid(products) {
       const grid = document.getElementById('productGrid');
@@ -945,31 +1223,39 @@
     }
 
     // Add new
-    document.getElementById('addProductBtn').addEventListener('click', () => {
+    document.getElementById('addProductBtn').addEventListener('click', async () => {
       editingId = null;
       pendingImageUrl = '';
       document.getElementById('modalTitle').textContent = 'Tambah Produk Baru';
       document.getElementById('pName').value = '';
-      document.getElementById('pCategory').value = 'Roofing & Cladding';
+      if (!categoriesState.length) await loadCategories();
+      populateCategorySelect(categoriesState[0] ? categoriesState[0].name : '');
       document.getElementById('pDesc').value = '';
       document.getElementById('modalDelete').style.display = 'none';
       resetImgArea();
+      renderProjectPicker([]);
       openModal();
       document.getElementById('pName').focus();
+      await ensureProjectsLoaded();
+      renderProjectPicker([]);
     });
 
     // Edit existing
-    function openEdit(p) {
+    async function openEdit(p) {
       editingId = p.id;
       pendingImageUrl = '';
       document.getElementById('modalTitle').textContent = 'Edit Produk';
       document.getElementById('pName').value = p.name;
-      document.getElementById('pCategory').value = p.category;
+      if (!categoriesState.length) await loadCategories();
+      populateCategorySelect(p.category);
       document.getElementById('pDesc').value = p.description;
       document.getElementById('modalDelete').style.display = 'inline-flex';
       resetImgArea();
       if (p.image) setImgPreview(p.image);
+      renderProjectPicker(p.projectIds || []);
       openModal();
+      await ensureProjectsLoaded();
+      renderProjectPicker(p.projectIds || []);
     }
 
     // Image upload
@@ -1033,7 +1319,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Menyimpan...';
 
-      const body = { name, category, description: desc };
+      const body = { name, category, description: desc, projectIds: selectedProjectIds() };
       if (pendingImageUrl) body.image = pendingImageUrl;
 
       try {
@@ -1086,6 +1372,513 @@
       }
     });
 
+    // === Projects (Proyek) ===
+    let adminProjects = [];
+    let adminProducts = [];
+
+    async function ensureProjectsLoaded() {
+      if (adminProjects.length) return;
+      try {
+        const r = await fetch('/api/projects');
+        adminProjects = r.ok ? await r.json() : [];
+      } catch { adminProjects = []; }
+    }
+
+    async function ensureProductsLoaded() {
+      if (adminProducts.length) return;
+      try {
+        const r = await fetch('/api/products');
+        adminProducts = r.ok ? await r.json() : [];
+      } catch { adminProducts = []; }
+    }
+
+    async function loadProjectsAdmin() {
+      const list = document.getElementById('projectsList');
+      list.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat proyek...</p>';
+      try {
+        const [rPr, _] = await Promise.all([fetch('/api/projects'), ensureProductsLoaded()]);
+        adminProjects = rPr.ok ? await rPr.json() : [];
+      } catch { adminProjects = []; }
+      renderProjectsAdmin();
+    }
+
+    function renderProjectsAdmin() {
+      const list = document.getElementById('projectsList');
+      document.getElementById('projSubtitle').textContent =
+        adminProjects.length + ' proyek terdaftar';
+      list.innerHTML = '';
+      if (!adminProjects.length) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:60px 0;color:var(--text-3);">
+            <div style="font-size:32px;margin-bottom:12px;">🏗️</div>
+            <p style="font-size:14px;font-weight:600;">Belum ada proyek.</p>
+            <p style="font-size:13px;margin-top:4px;">Klik <strong>"+ Tambah Proyek Baru"</strong> di atas.</p>
+          </div>`;
+        return;
+      }
+      adminProjects.forEach(proj => list.appendChild(makeProjectCard(proj)));
+    }
+
+    function makeProjectCard(proj) {
+      const state = {
+        id: proj.id,
+        title: proj.title || '',
+        year: proj.year || '',
+        location: proj.location || '',
+        description: proj.description || '',
+        images: [...(proj.images || [])],
+        productIds: [...(proj.productIds || [])].map(Number),
+      };
+
+      const card = document.createElement('div');
+      card.className = 'proj-card';
+
+      const top = document.createElement('div');
+      top.className = 'proj-card-top';
+      top.innerHTML = `
+        <div class="form-group"><label class="form-label">Nama Proyek</label><input type="text" data-f="title" placeholder="Mis. Gudang Sentul"></div>
+        <div class="form-row-2">
+          <div class="form-group"><label class="form-label">Tahun</label><input type="text" data-f="year" placeholder="Mis. 2023"></div>
+          <div class="form-group"><label class="form-label">Lokasi</label><input type="text" data-f="location" placeholder="Mis. Sentul, Bogor"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Deskripsi</label><textarea data-f="description" rows="3" placeholder="Ceritakan tentang proyek ini..."></textarea></div>`;
+      const titleInput = top.querySelector('[data-f="title"]');
+      const yearInput  = top.querySelector('[data-f="year"]');
+      const locInput   = top.querySelector('[data-f="location"]');
+      const descInput  = top.querySelector('[data-f="description"]');
+      titleInput.value = state.title;
+      yearInput.value  = state.year;
+      locInput.value   = state.location;
+      descInput.value  = state.description;
+      titleInput.addEventListener('input', () => { state.title = titleInput.value; });
+      yearInput.addEventListener('input',  () => { state.year = yearInput.value; });
+      locInput.addEventListener('input',   () => { state.location = locInput.value; });
+      descInput.addEventListener('input',  () => { state.description = descInput.value; });
+
+      const imgsWrap = document.createElement('div');
+      imgsWrap.className = 'proj-imgs';
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.multiple = true;
+      fileInput.style.display = 'none';
+
+      function renderImgs() {
+        imgsWrap.innerHTML = '';
+        state.images.forEach((src, idx) => {
+          const cell = document.createElement('div');
+          cell.className = 'proj-img';
+          const im = document.createElement('img');
+          im.src = src; im.alt = '';
+          const del = document.createElement('button');
+          del.className = 'proj-img-del';
+          del.type = 'button';
+          del.textContent = '×';
+          del.title = 'Hapus foto';
+          del.addEventListener('click', () => { state.images.splice(idx, 1); renderImgs(); });
+          cell.appendChild(im);
+          cell.appendChild(del);
+          imgsWrap.appendChild(cell);
+        });
+        const add = document.createElement('div');
+        add.className = 'proj-img-add';
+        add.innerHTML = '<span>＋</span>Tambah Foto';
+        add.addEventListener('click', () => fileInput.click());
+        imgsWrap.appendChild(add);
+      }
+
+      fileInput.addEventListener('change', async () => {
+        const files = [...fileInput.files];
+        if (!files.length) return;
+        card.classList.add('proj-uploading');
+        for (const file of files) {
+          try {
+            const fd = new FormData();
+            fd.append('image', file);
+            const r = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+            if (r.ok) { const d = await r.json(); state.images.push(d.url); }
+          } catch {}
+        }
+        card.classList.remove('proj-uploading');
+        renderImgs();
+        fileInput.value = '';
+      });
+
+      // Product picker — choose which products are used in this project
+      const prodLabel = document.createElement('label');
+      prodLabel.className = 'form-label';
+      prodLabel.style.cssText = 'display:block;margin-top:16px;margin-bottom:6px;';
+      prodLabel.textContent = 'Produk yang Digunakan';
+
+      const prodPicker = document.createElement('div');
+      prodPicker.className = 'proj-picker';
+      function renderProdPicker() {
+        prodPicker.innerHTML = '';
+        if (!adminProducts.length) {
+          prodPicker.innerHTML = '<div class="proj-picker-empty">Belum ada produk. Tambahkan dulu di tab Produk.</div>';
+          return;
+        }
+        const sel = new Set(state.productIds.map(Number));
+        adminProducts.forEach(prod => {
+          const lbl = document.createElement('label');
+          lbl.className = 'proj-pick';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = prod.id;
+          cb.checked = sel.has(Number(prod.id));
+          cb.addEventListener('change', () => {
+            if (cb.checked) { if (!state.productIds.includes(Number(prod.id))) state.productIds.push(Number(prod.id)); }
+            else state.productIds = state.productIds.filter(id => Number(id) !== Number(prod.id));
+          });
+          const thumb = document.createElement(prod.image ? 'img' : 'div');
+          thumb.className = 'proj-pick-thumb';
+          if (prod.image) thumb.src = prod.image;
+          const info = document.createElement('div');
+          info.innerHTML = `<div class="proj-pick-title">${prod.name || 'Tanpa nama'}</div><div class="proj-pick-meta">${prod.category || ''}</div>`;
+          lbl.appendChild(cb);
+          lbl.appendChild(thumb);
+          lbl.appendChild(info);
+          prodPicker.appendChild(lbl);
+        });
+      }
+      renderProdPicker();
+
+      const actions = document.createElement('div');
+      actions.className = 'proj-card-actions';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'btn-sm btn-green';
+      saveBtn.style.cssText = 'padding:9px 18px;font-size:13px;';
+      saveBtn.textContent = '💾 Simpan';
+      saveBtn.addEventListener('click', () => saveProject(state, saveBtn));
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'btn-sm';
+      delBtn.style.cssText = 'padding:9px 18px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      delBtn.textContent = '🗑️ Hapus';
+      delBtn.addEventListener('click', () => deleteProject(state.id));
+
+      actions.appendChild(saveBtn);
+      actions.appendChild(delBtn);
+
+      card.appendChild(top);
+      card.appendChild(fileInput);
+      card.appendChild(imgsWrap);
+      card.appendChild(prodLabel);
+      card.appendChild(prodPicker);
+      card.appendChild(actions);
+      renderImgs();
+      return card;
+    }
+
+    async function saveProject(state, btn) {
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      try {
+        const r = await fetch('/api/projects/' + state.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ title: state.title, year: state.year, location: state.location, description: state.description, images: state.images, productIds: state.productIds }),
+        });
+        if (r.ok) {
+          const updated = await r.json();
+          const i = adminProjects.findIndex(p => p.id === state.id);
+          if (i !== -1) adminProjects[i] = updated;
+          showToast('Proyek disimpan ✓', 'success');
+        } else showToast('Gagal menyimpan proyek', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+
+    async function deleteProject(id) {
+      if (!confirm('Hapus proyek ini? Tindakan ini tidak bisa dibatalkan.')) return;
+      try {
+        const r = await fetch('/api/projects/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) {
+          adminProjects = adminProjects.filter(p => p.id !== id);
+          renderProjectsAdmin();
+          showToast('Proyek dihapus', 'success');
+        } else showToast('Gagal menghapus proyek', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    document.getElementById('addProjectBtn').addEventListener('click', async () => {
+      try {
+        const r = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ title: '', images: [] }),
+        });
+        if (r.ok) {
+          const proj = await r.json();
+          adminProjects.push(proj);
+          renderProjectsAdmin();
+          showToast('Proyek baru dibuat ✓', 'success');
+        } else showToast('Gagal membuat proyek', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    });
+
+    // Project picker inside the product modal
+    function renderProjectPicker(selectedIds) {
+      const wrap = document.getElementById('pProjectsPicker');
+      wrap.innerHTML = '';
+      if (!adminProjects.length) {
+        wrap.innerHTML = '<div class="proj-picker-empty">Belum ada proyek. Tambahkan dulu di tab Proyek.</div>';
+        return;
+      }
+      const sel = new Set((selectedIds || []).map(Number));
+      adminProjects.forEach(proj => {
+        const label = document.createElement('label');
+        label.className = 'proj-pick';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = proj.id;
+        cb.checked = sel.has(Number(proj.id));
+
+        const thumb = document.createElement(proj.images && proj.images[0] ? 'img' : 'div');
+        thumb.className = 'proj-pick-thumb';
+        if (proj.images && proj.images[0]) thumb.src = proj.images[0];
+
+        const info = document.createElement('div');
+        info.innerHTML = `<div class="proj-pick-title">${proj.title || 'Tanpa judul'}</div><div class="proj-pick-meta">${(proj.images || []).length} foto</div>`;
+
+        label.appendChild(cb);
+        label.appendChild(thumb);
+        label.appendChild(info);
+        wrap.appendChild(label);
+      });
+    }
+
+    function selectedProjectIds() {
+      return [...document.querySelectorAll('#pProjectsPicker input:checked')].map(cb => Number(cb.value));
+    }
+
+    // === News (Berita) ===
+    let adminNews = [];
+
+    async function loadNewsAdmin() {
+      const list = document.getElementById('newsList');
+      list.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat berita...</p>';
+      try {
+        const r = await fetch('/api/news');
+        adminNews = r.ok ? await r.json() : [];
+      } catch { adminNews = []; }
+      renderNewsAdmin();
+    }
+
+    function renderNewsAdmin() {
+      const list = document.getElementById('newsList');
+      document.getElementById('newsSubtitle').textContent = adminNews.length + ' berita terdaftar';
+      list.innerHTML = '';
+      if (!adminNews.length) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:60px 0;color:var(--text-3);">
+            <div style="font-size:32px;margin-bottom:12px;">📰</div>
+            <p style="font-size:14px;font-weight:600;">Belum ada berita.</p>
+            <p style="font-size:13px;margin-top:4px;">Klik <strong>"+ Tambah Berita Baru"</strong> di atas.</p>
+          </div>`;
+        return;
+      }
+      adminNews.forEach(n => list.appendChild(makeNewsCard(n)));
+    }
+
+    function makeNewsCard(news) {
+      const state = {
+        id: news.id,
+        title: news.title || '',
+        mediaType: news.mediaType || 'image',
+        media: news.media || '',
+        mediaPoster: news.mediaPoster || '',
+        description: news.description || '',
+        date: news.date || new Date().toISOString().slice(0, 10),
+      };
+
+      const card = document.createElement('div');
+      card.className = 'proj-card';
+
+      const top = document.createElement('div');
+      top.className = 'proj-card-top';
+      top.innerHTML = `
+        <div class="form-group"><label class="form-label">Judul Berita</label><input type="text" data-f="title" placeholder="Mis. Peluncuran Produk Baru"></div>
+        <div class="form-group"><label class="form-label">Tanggal</label><input type="date" data-f="date"></div>
+        <div class="form-group"><label class="form-label">Deskripsi Singkat</label><textarea data-f="description" rows="3" placeholder="Ringkasan singkat berita..."></textarea></div>`;
+      const titleInput = top.querySelector('[data-f="title"]');
+      const dateInput  = top.querySelector('[data-f="date"]');
+      const descInput  = top.querySelector('[data-f="description"]');
+      titleInput.value = state.title;
+      dateInput.value  = state.date;
+      descInput.value  = state.description;
+      titleInput.addEventListener('input', () => { state.title = titleInput.value; });
+      dateInput.addEventListener('input',  () => { state.date = dateInput.value; });
+      descInput.addEventListener('input',  () => { state.description = descInput.value; });
+
+      // Media (foto atau video)
+      const mediaLabel = document.createElement('label');
+      mediaLabel.className = 'form-label';
+      mediaLabel.style.cssText = 'display:block;margin-top:16px;margin-bottom:6px;';
+      mediaLabel.textContent = 'Media (Foto atau Video)';
+
+      const preview = document.createElement('div');
+      preview.style.cssText = 'border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg);min-height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;';
+
+      function renderPreview() {
+        preview.innerHTML = '';
+        if (!state.media) {
+          preview.innerHTML = '<span style="color:var(--text-3);font-size:13px;padding:24px;">Belum ada media</span>';
+          return;
+        }
+        if (state.mediaType === 'video') {
+          const v = document.createElement('video');
+          v.src = state.media; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+          v.style.cssText = 'width:100%;max-height:220px;object-fit:cover;';
+          v.play().catch(() => {});
+          preview.appendChild(v);
+        } else {
+          const im = document.createElement('img');
+          im.src = state.media;
+          im.style.cssText = 'width:100%;max-height:220px;object-fit:cover;';
+          preview.appendChild(im);
+        }
+      }
+      renderPreview();
+
+      const photoInput = document.createElement('input');
+      photoInput.type = 'file'; photoInput.accept = 'image/*'; photoInput.style.display = 'none';
+      const videoInput = document.createElement('input');
+      videoInput.type = 'file'; videoInput.accept = 'video/mp4,video/*'; videoInput.style.display = 'none';
+
+      const mediaBtns = document.createElement('div');
+      mediaBtns.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+      const photoBtn = document.createElement('button');
+      photoBtn.type = 'button'; photoBtn.className = 'btn-sm';
+      photoBtn.style.cssText = 'padding:8px 16px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      photoBtn.textContent = '🖼️ Unggah Foto';
+      const videoBtn = document.createElement('button');
+      videoBtn.type = 'button'; videoBtn.className = 'btn-sm';
+      videoBtn.style.cssText = photoBtn.style.cssText;
+      videoBtn.textContent = '🎬 Unggah Video';
+      mediaBtns.appendChild(photoBtn);
+      mediaBtns.appendChild(videoBtn);
+
+      photoBtn.addEventListener('click', () => photoInput.click());
+      videoBtn.addEventListener('click', () => videoInput.click());
+
+      photoInput.addEventListener('change', async () => {
+        const file = photoInput.files[0];
+        if (!file) return;
+        card.classList.add('proj-uploading');
+        try {
+          const fd = new FormData();
+          fd.append('image', file);
+          const r = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+          if (r.ok) { const d = await r.json(); state.media = d.url; state.mediaType = 'image'; state.mediaPoster = ''; renderPreview(); }
+          else showToast('Gagal mengunggah foto', 'error');
+        } catch { showToast('Tidak dapat terhubung', 'error'); }
+        card.classList.remove('proj-uploading');
+        photoInput.value = '';
+      });
+
+      videoInput.addEventListener('change', async () => {
+        const file = videoInput.files[0];
+        if (!file) return;
+        if (file.type && file.type !== 'video/mp4' && file.type !== 'video/webm') {
+          showToast('⚠️ Sebaiknya unggah MP4 — file .MOV/HEVC (mis. dari iPhone) sering gagal tampil di Chrome/Android', 'error');
+        }
+        card.classList.add('proj-uploading');
+        try {
+          // Capture the first frame as a poster (client-side) so the news card
+          // shows an instant image while the video lazy-loads on scroll.
+          let posterUrl = '';
+          try {
+            const posterBlob = await captureVideoPoster(file);
+            if (posterBlob) posterUrl = await uploadPoster(posterBlob);
+          } catch {}
+          const url = await uploadHeroVideo(file); // reuses signed/direct upload flow
+          if (url) { state.media = url; state.mediaType = 'video'; state.mediaPoster = posterUrl; renderPreview(); }
+          else showToast('Gagal mengunggah video', 'error');
+        } catch { showToast('Gagal mengunggah video', 'error'); }
+        card.classList.remove('proj-uploading');
+        videoInput.value = '';
+      });
+
+      const actions = document.createElement('div');
+      actions.className = 'proj-card-actions';
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button'; saveBtn.className = 'btn-sm btn-green';
+      saveBtn.style.cssText = 'padding:9px 18px;font-size:13px;';
+      saveBtn.textContent = '💾 Simpan';
+      saveBtn.addEventListener('click', () => saveNews(state, saveBtn));
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button'; delBtn.className = 'btn-sm';
+      delBtn.style.cssText = 'padding:9px 18px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      delBtn.textContent = '🗑️ Hapus';
+      delBtn.addEventListener('click', () => deleteNews(state.id));
+      actions.appendChild(saveBtn);
+      actions.appendChild(delBtn);
+
+      card.appendChild(top);
+      card.appendChild(mediaLabel);
+      card.appendChild(preview);
+      card.appendChild(mediaBtns);
+      card.appendChild(photoInput);
+      card.appendChild(videoInput);
+      card.appendChild(actions);
+      return card;
+    }
+
+    async function saveNews(state, btn) {
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Menyimpan...';
+      try {
+        const r = await fetch('/api/news/' + state.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ title: state.title, mediaType: state.mediaType, media: state.media, mediaPoster: state.mediaPoster, description: state.description, date: state.date }),
+        });
+        if (r.ok) {
+          const updated = await r.json();
+          const i = adminNews.findIndex(n => n.id === state.id);
+          if (i !== -1) adminNews[i] = updated;
+          showToast('Berita disimpan ✓', 'success');
+        } else showToast('Gagal menyimpan berita', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+      btn.disabled = false; btn.textContent = orig;
+    }
+
+    async function deleteNews(id) {
+      if (!confirm('Hapus berita ini? Tindakan ini tidak bisa dibatalkan.')) return;
+      try {
+        const r = await fetch('/api/news/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) {
+          adminNews = adminNews.filter(n => n.id !== id);
+          renderNewsAdmin();
+          showToast('Berita dihapus', 'success');
+        } else showToast('Gagal menghapus berita', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    document.getElementById('addNewsBtn').addEventListener('click', async () => {
+      try {
+        const r = await fetch('/api/news', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ title: '', description: '', mediaType: 'image', media: '', date: new Date().toISOString().slice(0, 10) }),
+        });
+        if (r.ok) {
+          const news = await r.json();
+          adminNews.unshift(news);
+          renderNewsAdmin();
+          showToast('Berita baru dibuat ✓', 'success');
+        } else showToast('Gagal membuat berita', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    });
+
     // === Tabs ===
     document.querySelectorAll('.admin-tab').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1094,7 +1887,9 @@
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'tabDocuments') loadDocs();
-        if (btn.dataset.tab === 'tabProducts')  loadProducts();
+        if (btn.dataset.tab === 'tabProducts')  { loadProducts(); loadCategories(); }
+        if (btn.dataset.tab === 'tabProjects')  loadProjectsAdmin();
+        if (btn.dataset.tab === 'tabNews')      loadNewsAdmin();
         if (btn.dataset.tab === 'tabBeranda')   loadHomepage();
       });
     });
@@ -1213,16 +2008,15 @@
     });
 
     // === Beranda / Homepage ===
-    let hpState = { heroImages: [], alderonImage: '', portfolio: [] };
+    let hpState = { heroVideo: '', alderonImage: '' };
 
     async function loadHomepage() {
       try {
         const r = await fetch('/api/homepage');
         if (r.ok) hpState = await r.json();
       } catch {}
-      renderHeroSlots();
+      renderHeroVideo();
       renderAlderonSlot();
-      renderPortfolioSlots();
     }
 
     function makeImgSlot(currentSrc, label, onUpload) {
@@ -1282,17 +2076,169 @@
       return slot;
     }
 
-    function renderHeroSlots() {
-      const grid = document.getElementById('heroImgGrid');
-      grid.innerHTML = '';
-      const imgs = hpState.heroImages || [];
-      for (let i = 0; i < 6; i++) {
-        const idx = i;
-        const slot = makeImgSlot(imgs[idx] || '', `Foto ${idx + 1}`, url => {
-          hpState.heroImages[idx] = url;
-        });
-        grid.appendChild(slot);
+    // Upload a hero video. In Firebase mode the browser uploads directly to
+    // Cloud Storage (bypassing the serverless 4.5MB body limit); in dev it
+    // falls back to a multipart upload to the server. Returns the public URL.
+    async function uploadHeroVideo(file) {
+      const auth = { Authorization: 'Bearer ' + token };
+      const contentType = file.type || 'video/mp4';
+      const ext = (file.name.match(/\.[a-z0-9]{2,5}$/i) || ['.mp4'])[0];
+
+      const initRes = await fetch('/api/upload/video/init', {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentType, ext }),
+      });
+      if (!initRes.ok) throw new Error('Gagal memulai upload');
+      const init = await initRes.json();
+
+      if (init.mode === 'direct') {
+        const fd = new FormData();
+        fd.append('video', file);
+        const r = await fetch('/api/upload/video', { method: 'POST', headers: auth, body: fd });
+        if (!r.ok) throw new Error('Gagal upload video');
+        return (await r.json()).url;
       }
+
+      // Signed direct-to-storage upload
+      const put = await fetch(init.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': init.contentType },
+        body: file,
+      });
+      if (!put.ok) throw new Error('Gagal mengunggah ke penyimpanan');
+
+      const fin = await fetch('/api/upload/video/finalize', {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectPath: init.objectPath }),
+      });
+      if (!fin.ok) throw new Error('Gagal menyelesaikan upload');
+      return (await fin.json()).url;
+    }
+
+    // Capture the first frame of a video File as a JPEG Blob, entirely in the
+    // browser (the server never sees the video bytes — they go direct to
+    // Storage). Used as the hero <video poster> so the hero shows instantly
+    // while the video buffers. Resolves null if capture fails.
+    function captureVideoPoster(file) {
+      return new Promise(resolve => {
+        const v = document.createElement('video');
+        v.muted = true; v.playsInline = true; v.preload = 'auto';
+        v.src = URL.createObjectURL(file);
+        let settled = false;
+        const cleanup = () => { try { URL.revokeObjectURL(v.src); } catch {} };
+        const finish = b => { if (settled) return; settled = true; cleanup(); resolve(b); };
+        const grab = () => {
+          try {
+            const w = v.videoWidth, h = v.videoHeight;
+            if (!w || !h) return finish(null);
+            const scale = Math.min(1, 1280 / w); // cap width so the poster stays small
+            const cw = Math.round(w * scale), ch = Math.round(h * scale);
+            const c = document.createElement('canvas');
+            c.width = cw; c.height = ch;
+            c.getContext('2d').drawImage(v, 0, 0, cw, ch);
+            c.toBlob(b => finish(b), 'image/jpeg', 0.82);
+          } catch { finish(null); }
+        };
+        v.addEventListener('error', () => finish(null), { once: true });
+        v.addEventListener('seeked', grab, { once: true });
+        v.addEventListener('loadeddata', () => {
+          // Nudge past frame 0 to guarantee a decoded frame is available.
+          try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch { grab(); }
+        }, { once: true });
+        setTimeout(() => finish(null), 8000); // safety net
+      });
+    }
+
+    // Upload a poster Blob through the standard image endpoint. Returns the URL.
+    async function uploadPoster(blob) {
+      const fd = new FormData();
+      fd.append('image', blob, 'poster.jpg');
+      const r = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+      if (!r.ok) throw new Error('Gagal upload poster');
+      return (await r.json()).url;
+    }
+
+    function renderHeroVideo() {
+      const container = document.getElementById('heroVideoSlot');
+      container.innerHTML = '';
+
+      const slot = document.createElement('div');
+      slot.className = 'hp-video-slot';
+
+      const hint = document.createElement('div');
+      hint.className = 'hp-img-slot-hint';
+      hint.innerHTML = '<span class="hp-img-slot-icon">🎬</span><span class="hp-img-slot-label">Pilih Video MP4</span>';
+      slot.appendChild(hint);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'hp-overlay';
+      overlay.innerHTML = '<span class="hp-overlay-text">Ganti Video</span>';
+      slot.appendChild(overlay);
+
+      function setVideoPreview(src) {
+        let v = slot.querySelector('video');
+        if (!v) {
+          v = document.createElement('video');
+          v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+          slot.insertBefore(v, hint);
+        }
+        v.src = src;
+        v.play().catch(() => {});
+        hint.style.display = 'none';
+      }
+
+      if (hpState.heroVideo) setVideoPreview(hpState.heroVideo);
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'video/mp4,video/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+
+      slot.addEventListener('click', () => input.click());
+      input.addEventListener('change', async () => {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.type && file.type !== 'video/mp4' && file.type !== 'video/webm') {
+          showToast('⚠️ Sebaiknya unggah MP4 — file .MOV/HEVC (mis. dari iPhone) sering gagal tampil di Chrome/Android', 'error');
+        }
+
+        setVideoPreview(URL.createObjectURL(file));
+
+        const loading = document.createElement('div');
+        loading.className = 'hp-video-uploading';
+        loading.textContent = 'Mengupload video...';
+        slot.appendChild(loading);
+
+        try {
+          // Capture + upload the first-frame poster first (it's small and fast),
+          // so the hero has an instant image even before the video buffers.
+          let posterUrl = '';
+          try {
+            const posterBlob = await captureVideoPoster(file);
+            if (posterBlob) {
+              loading.textContent = 'Membuat poster...';
+              posterUrl = await uploadPoster(posterBlob);
+            }
+          } catch {}
+
+          loading.textContent = 'Mengupload video...';
+          const url = await uploadHeroVideo(file);
+          if (url) {
+            hpState.heroVideo = url;
+            if (posterUrl) hpState.heroPoster = posterUrl;
+            showToast('Video diupload ✓ — klik Simpan Perubahan', 'success');
+          } else {
+            showToast('Gagal upload video', 'error');
+          }
+        } catch (err) { showToast(err.message || 'Gagal upload video', 'error'); }
+        loading.remove();
+        input.value = '';
+      });
+
+      container.appendChild(slot);
     }
 
     function renderAlderonSlot() {
@@ -1302,39 +2248,6 @@
         hpState.alderonImage = url;
       });
       grid.appendChild(slot);
-    }
-
-    function renderPortfolioSlots() {
-      const container = document.getElementById('portfolioSlots');
-      container.innerHTML = '';
-      const portfolio = hpState.portfolio || [];
-      for (let i = 0; i < 3; i++) {
-        const item  = portfolio[i] || { image: '', title: '' };
-        const idx   = i;
-        const row   = document.createElement('div');
-        row.className = 'portfolio-slot';
-
-        const slot = makeImgSlot(item.image || '', `Proyek ${i + 1}`, url => {
-          if (!hpState.portfolio[idx]) hpState.portfolio[idx] = { image: '', title: '' };
-          hpState.portfolio[idx].image = url;
-        });
-        slot.style.aspectRatio = '4/3';
-
-        const info = document.createElement('div');
-        info.innerHTML = `
-          <label class="form-label" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-2);margin-bottom:7px;">Judul Proyek ${i + 1}</label>
-          <input type="text" value="${item.title || ''}" placeholder="Mis. Gudang Industri" style="width:100%;">
-        `;
-        const titleInput = info.querySelector('input');
-        titleInput.addEventListener('input', () => {
-          if (!hpState.portfolio[idx]) hpState.portfolio[idx] = { image: '', title: '' };
-          hpState.portfolio[idx].title = titleInput.value;
-        });
-
-        row.appendChild(slot);
-        row.appendChild(info);
-        container.appendChild(row);
-      }
     }
 
     document.getElementById('saveHomepageBtn').addEventListener('click', async () => {

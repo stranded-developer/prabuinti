@@ -7,64 +7,87 @@
   <meta name="description" content="Unduh dokumen resmi PT. Prabu Inti Suksesindo.">
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .doc-page { padding: 120px 0 96px; min-height: 100svh; }
-    .doc-page-header { margin-bottom: 48px; }
+    .doc-page { padding: 140px 0 110px; min-height: 100svh; }
 
-    .doc-list { display: flex; flex-direction: column; gap: 12px; max-width: 680px; }
+    /* Editorial header */
+    .doc-page-header {
+      max-width: 1000px;
+      margin: 0 auto 8px;
+      padding-bottom: 36px;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-page-header .section-label { margin-bottom: 18px; }
+    .doc-page-header h1 {
+      font-size: clamp(56px, 12vw, 140px);
+      font-weight: 800;
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 22px;
+    }
+    .doc-page-header .section-desc { max-width: 460px; font-size: 15px; }
+
+    /* Editorial numbered list */
+    .doc-list { max-width: 1000px; margin: 0 auto; }
 
     .doc-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: 20px 24px;
-      display: flex;
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
       align-items: center;
-      gap: 20px;
-      transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+      gap: 28px;
+      padding: 30px 8px;
+      border-bottom: 1px solid var(--border);
+      transition: background 200ms var(--ease-out), padding 250ms var(--ease-out);
     }
     @media (hover: hover) and (pointer: fine) {
-      .doc-card:hover {
-        border-color: var(--border-2);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-        transform: translateY(-2px);
-      }
+      .doc-card:hover { background: var(--bg-2); padding-inline: 20px; }
+      .doc-card:hover .doc-num { color: var(--accent); }
+      .doc-card:hover .doc-btn { background: var(--accent); color: #fff; border-color: var(--accent); }
     }
 
-    .doc-icon {
-      width: 44px;
-      height: 44px;
-      background: var(--accent-bg);
-      border-radius: var(--r-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+    .doc-num {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--border-2);
+      letter-spacing: 0.02em;
+      transition: color 200ms var(--ease-out);
     }
-    .doc-icon svg { width: 22px; height: 22px; color: var(--accent); }
 
-    .doc-info { flex: 1; min-width: 0; }
-    .doc-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; margin-bottom: 3px; }
-    .doc-meta  { font-size: 12px; color: var(--text-3); display: flex; gap: 12px; flex-wrap: wrap; }
-    .doc-desc  { font-size: 13px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+    .doc-info { min-width: 0; }
+    .doc-title {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.005em;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .doc-meta  { font-size: 12px; color: var(--text-3); display: flex; gap: 16px; flex-wrap: wrap; }
+    .doc-meta span { display: inline-flex; align-items: center; gap: 6px; }
+    .doc-desc  { font-size: 13.5px; color: var(--text-2); margin-bottom: 8px; line-height: 1.55; max-width: 520px; }
 
     .doc-btn {
       flex-shrink: 0;
-      height: 38px;
-      padding: 0 18px;
-      background: var(--accent);
-      color: #fff;
-      border-radius: var(--r-sm);
+      height: 44px;
+      padding: 0 22px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border-2);
+      border-radius: 100px;
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       display: flex;
       align-items: center;
-      gap: 6px;
-      transition: background 150ms var(--ease-out), transform 160ms var(--ease-out);
+      gap: 8px;
+      transition: background 150ms var(--ease-out), color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 160ms var(--ease-out);
     }
-    .doc-btn:hover  { background: var(--accent-dark); }
     .doc-btn:active { transform: scale(0.97); }
-    .doc-btn svg { width: 14px; height: 14px; }
+    .doc-btn svg { width: 15px; height: 15px; }
 
     /* === OTP Modal === */
     .modal-bg {
@@ -255,8 +278,19 @@
     .doc-empty p { font-size: 14px; font-weight: 500; }
 
     @media (max-width: 600px) {
-      .doc-card { flex-wrap: wrap; }
-      .doc-btn  { width: 100%; justify-content: center; }
+      .doc-page { padding: 116px 0 80px; }
+      .doc-card {
+        grid-template-columns: 40px 1fr;
+        gap: 14px 16px;
+        padding: 22px 4px;
+      }
+      .doc-num { font-size: 18px; }
+      .doc-btn {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: center;
+        height: 42px;
+      }
       .otp-digit { width: 40px; height: 50px; font-size: 18px; }
     }
   </style>
@@ -418,15 +452,12 @@
           return;
         }
         list.innerHTML = '';
-        docs.forEach(doc => {
+        docs.forEach((doc, i) => {
+          const num = String(i + 1).padStart(2, '0');
           const card = document.createElement('div');
           card.className = 'doc-card reveal';
           card.innerHTML = `
-            <div class="doc-icon">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-            </div>
+            <div class="doc-num">${num}</div>
             <div class="doc-info">
               <div class="doc-title">${doc.title}</div>
               ${doc.description ? `<div class="doc-desc">${doc.description}</div>` : ''}

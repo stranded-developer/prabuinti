@@ -5,29 +5,77 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PT. Prabu Inti Suksesindo — Perusahaan Serat Fiber Termaju di Indonesia</title>
   <meta name="description" content="Perusahaan serat fiber termaju di Indonesia. Supplier bahan bangunan terpercaya di Tangerang — Fiberglass, Roofing & Cladding, Floor Deck, Roof Truss, Insulasi, Wiremesh. Melayani seluruh Indonesia sejak 2011.">
-  <meta name="theme-color" content="#111110">
+  <meta name="theme-color" content="#0C0D0F">
+  <!-- Industrial type pairing: Oswald (condensed steel display) + Barlow
+       (engineering-grade body, designed for signage). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
+  <!-- Warm up the connection to Firebase Storage so the hero video (whose src
+       is inlined server-side, below) starts downloading during HTML parse. -->
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com">
+  <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
 </head>
-<body>
+<body class="preloading">
 
-  <!-- Nav -->
+  <!-- Preloader — holds the page until the hero video + above-the-fold images are ready -->
+  <div class="preloader" id="preloader" role="status" aria-live="polite" aria-label="Memuat halaman">
+    <div class="preloader-inner">
+      <div class="preloader-logo">
+        <span class="preloader-logo-main">PT. PRABU INTI</span>
+        <span class="preloader-logo-sub">SUKSESINDO</span>
+      </div>
+      <div class="preloader-bar"><span></span></div>
+    </div>
+  </div>
+  <script>
+    // Safety net: never keep the loader up if scripts fail to load.
+    setTimeout(function () {
+      document.body && document.body.classList.remove('preloading');
+      var p = document.getElementById('preloader');
+      if (p) p.classList.add('hidden');
+    }, 3000);
+  </script>
+
+  <!-- Nav — icon-only rail; each icon reveals its label on hover -->
   <nav class="nav" id="nav">
     <div class="nav-inner">
       <a href="/" class="nav-logo">
         <img src="/images/logo/IMG_9415.JPG" alt="PT. Prabu Inti Suksesindo" class="nav-logo-img">
         <div class="nav-logo-text">
-          <span class="nav-logo-main">PT. PRABU INTI</span>
+          <span class="nav-logo-main">PRABU&nbsp;INTI</span>
           <span class="nav-logo-sub">SUKSESINDO</span>
         </div>
       </a>
+
       <div class="nav-links">
-        <a href="#produk">Produk</a>
-        <a href="#proyek">Referensi</a>
-        <a href="#tentang">Tentang</a>
-        <a href="#faq">FAQ</a>
-        <a href="/dokumen">Dokumen</a>
-        <a href="#kontak" class="nav-cta">Hubungi Kami</a>
+        <a href="#produk" class="nav-ico" aria-label="Produk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span class="nav-ico-label">Produk</span>
+        </a>
+        <a href="#proyek" class="nav-ico" aria-label="Referensi Proyek">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+          <span class="nav-ico-label">Proyek</span>
+        </a>
+        <a href="#tentang" class="nav-ico" aria-label="Tentang Kami">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <span class="nav-ico-label">Tentang</span>
+        </a>
+        <a href="#faq" class="nav-ico" aria-label="FAQ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 0 1 5.4 1c0 1.8-2.6 2.5-2.6 2.5"/><path d="M12 17h.01"/></svg>
+          <span class="nav-ico-label">FAQ</span>
+        </a>
+        <a href="/dokumen" class="nav-ico" aria-label="Dokumen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+          <span class="nav-ico-label">Dokumen</span>
+        </a>
+        <a href="#kontak" class="nav-ico nav-ico--cta" aria-label="Hubungi Kami">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16.5v2.5a2 2 0 0 1-2.2 2 19 19 0 0 1-8.3-3 19 19 0 0 1-6-6 19 19 0 0 1-3-8.4A2 2 0 0 1 3.5 3H6a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L7 10.6a16 16 0 0 0 6 6l1.2-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6A2 2 0 0 1 21 16.5z"/></svg>
+          <span class="nav-ico-label">Hubungi</span>
+        </a>
       </div>
+
       <button class="nav-menu" id="navMenu" aria-label="Buka menu" aria-expanded="false">
         <span></span>
         <span></span>
@@ -43,110 +91,128 @@
     </div>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero — full-bleed background video with text laid over it.
+       The server inlines src (+ poster) into the <video> below so the
+       download begins before main.js even runs. -->
   <section class="hero" id="beranda">
-    <div class="hero-inner">
+    <div class="hero-video" aria-hidden="true">
+      <video id="heroVideo" autoplay muted loop playsinline preload="auto" __HERO_VIDEO_ATTRS__></video>
+    </div>
+    <div class="hero-scrim" aria-hidden="true"></div>
 
-      <!-- Left: text -->
+    <div class="hero-inner">
       <div class="hero-content">
-        <div class="hero-tag">Tangerang · Sejak 2011</div>
         <h1 class="hero-title">
-          Perusahaan Serat Fiber<br>
-          <em>Termaju</em><br>
-          di Indonesia
+          Baja yang<br>
+          <em>Menopang</em><br>
+          Negeri
         </h1>
         <p class="hero-desc">
-          Roofing &amp; Cladding · Fiberglass · Floor Deck<br>
-          Roof Truss · Alderon uPVC · Insulasi · Wiremesh
+          Pusat material atap &amp; konstruksi — kokoh, presisi, siap kirim
+          ke seluruh Indonesia.<br>
+          Roofing · Cladding · Fiberglass · Floor Deck · Roof Truss · Alderon uPVC · Insulasi · Wiremesh.
         </p>
         <div class="hero-actions">
-          <a href="#produk" class="btn btn-primary">Lihat Produk</a>
+          <a href="#produk" class="btn btn-primary">Jelajahi Material</a>
           <a href="#kontak" class="btn btn-ghost">Minta Penawaran</a>
         </div>
         <div class="hero-stats">
           <div class="hero-stat">
             <div class="hero-stat-value" data-count="15">15</div>
-            <div class="hero-stat-label">Tahun Berpengalaman</div>
+            <div class="hero-stat-label">Tahun Membangun</div>
           </div>
           <div class="hero-stat">
             <div class="hero-stat-value" data-count="26">26+</div>
-            <div class="hero-stat-label">Varian Produk</div>
+            <div class="hero-stat-label">Varian Material</div>
           </div>
           <div class="hero-stat">
             <div class="hero-stat-value">ID</div>
-            <div class="hero-stat-label">Se-Indonesia</div>
+            <div class="hero-stat-label">Jangkauan Nasional</div>
           </div>
         </div>
       </div>
-
-      <!-- Right: animated collage (images loaded via /api/homepage) -->
-      <div class="hero-collage" aria-hidden="true">
-        <div class="collage-cell collage-cell-top" id="collageCell0">
-          <img class="collage-img-bg" src="/images/hero/kokoh_cover-01.png" alt="">
-          <img class="collage-img-top" src="" alt="">
-        </div>
-        <div class="collage-row-bottom">
-          <div class="collage-cell" id="collageCell1">
-            <img class="collage-img-bg" src="/images/hero/alderon_warehouse-4.png" alt="">
-            <img class="collage-img-top" src="" alt="">
-          </div>
-          <div class="collage-cell" id="collageCell2">
-            <img class="collage-img-bg" src="/images/hero/alderon_cover-1.png" alt="">
-            <img class="collage-img-top" src="" alt="">
-          </div>
-        </div>
-      </div>
-
-
     </div>
+
+    <div class="hero-scroll-cue" aria-hidden="true"><span></span></div>
   </section>
 
-  <!-- Pillars -->
-  <section class="pillars">
+  <!-- Pillars — single centered card; tap/click cycles 01 → 02 → 03 → 01.
+       The left/right rails animate continuously. Drop a custom animation by
+       setting a background-image on .pillars-deck (see CSS note). -->
+  <section class="pillars" id="pillars">
+    <!-- Constantly-animating side decorations -->
+    <div class="pillars-rail pillars-rail--left" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="pillars-rail pillars-rail--right" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+
     <div class="container">
-      <div class="pillars-grid">
-        <div class="pillar">
-          <div class="pillar-num">01</div>
-          <h3>Beragam Pilihan</h3>
-          <p>Lebih dari 26 varian produk atap dan konstruksi dari merek terpercaya untuk semua kebutuhan proyek Anda.</p>
+      <div class="pillars-stage">
+        <button class="pillars-deck" id="pillarsDeck" aria-label="Tampilkan keunggulan berikutnya">
+          <div class="pillar is-active" data-step="0">
+            <div class="pillar-num">01</div>
+            <h3>Stok Lengkap</h3>
+            <p>26+ varian atap dan konstruksi dari merek terpercaya — satu pintu untuk seluruh kebutuhan material proyek Anda.</p>
+          </div>
+          <div class="pillar" data-step="1">
+            <div class="pillar-num">02</div>
+            <h3>Pesan Tanpa Ribet</h3>
+            <p>Cukup chat WhatsApp atau isi form. Tim teknis kami bantu hitung kebutuhan dan kunci harga terbaik.</p>
+          </div>
+          <div class="pillar" data-step="2">
+            <div class="pillar-num">03</div>
+            <h3>Kirim Tepat Waktu</h3>
+            <p>Distribusi ke seluruh Indonesia dengan pengemasan rapat — material sampai utuh, jadwal proyek aman.</p>
+          </div>
+        </button>
+
+        <div class="pillars-dots" id="pillarsDots" role="tablist" aria-label="Keunggulan">
+          <button class="pillars-dot is-active" data-step="0" aria-label="Keunggulan 1"></button>
+          <button class="pillars-dot" data-step="1" aria-label="Keunggulan 2"></button>
+          <button class="pillars-dot" data-step="2" aria-label="Keunggulan 3"></button>
         </div>
-        <div class="pillar">
-          <div class="pillar-num">02</div>
-          <h3>Mudah Pesan</h3>
-          <p>Cukup hubungi kami via WhatsApp atau isi form kontak. Tim kami siap membantu proses pemesanan Anda.</p>
-        </div>
-        <div class="pillar">
-          <div class="pillar-num">03</div>
-          <h3>Siap Dikirim</h3>
-          <p>Pengiriman ke seluruh Indonesia. Produk tiba tepat waktu dengan jaminan kualitas pengemasan terbaik.</p>
-        </div>
+        <div class="pillars-hint">Ketuk untuk lanjut</div>
       </div>
     </div>
   </section>
 
-  <!-- Alderon Featured -->
-  <section class="alderon-feature">
+  <!-- Alderon Featured — editorial product spotlight -->
+  <section class="alderon-feature" id="alderonFeature">
     <div class="alderon-feature-inner">
-      <div class="alderon-content reveal">
-        <div class="alderon-badge">Produk Unggulan Terbaru</div>
-        <h2 class="alderon-brand"><span>ALDERON</span></h2>
-        <p class="alderon-sub">Premium uPVC Twinwall Roofing</p>
-        <p class="alderon-desc">Inovasi terbaru dalam teknologi atap. Alderon hadir dengan sistem dinding ganda (twinwall) yang memberikan insulasi panas superior — atap tetap sejuk, bangunan lebih nyaman.</p>
-        <div class="alderon-features">
-          <div class="alderon-feature-item">Atap Sejuk — insulasi panas optimal</div>
-          <div class="alderon-feature-item">Tahan UV &amp; Korosi — lapisan Laser Print</div>
-          <div class="alderon-feature-item">Tidak Remuk Saat Hujan — dinding ganda kokoh</div>
-          <div class="alderon-feature-item">Sistem Sambungan Anti Bocor</div>
-          <div class="alderon-feature-item">Tersedia IDH 860 Coating · ID 860 · Evo 1000</div>
+      <!-- Kicker row spanning the top -->
+      <div class="alderon-top reveal">
+        <span class="alderon-index">★ 01</span>
+        <span class="alderon-kicker">Produk Unggulan Terbaru</span>
+        <span class="alderon-rule" aria-hidden="true"></span>
+      </div>
+
+      <!-- Main: copy + image -->
+      <div class="alderon-main">
+        <div class="alderon-content reveal">
+          <h2 class="alderon-brand"><span>ALDERON</span></h2>
+          <p class="alderon-sub">Premium uPVC Twinwall Roofing</p>
+          <p class="alderon-desc">Inovasi terbaru dalam teknologi atap. Alderon hadir dengan sistem dinding ganda (twinwall) yang memberikan insulasi panas superior — atap tetap sejuk, bangunan lebih nyaman.</p>
+          <a href="https://wa.me/6285833339997?text=Halo%2C%20saya%20ingin%20tanya%20tentang%20produk%20Alderon" class="alderon-cta" target="_blank" rel="noopener">
+            Tanya Ketersediaan
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
         </div>
-        <a href="https://wa.me/6285833339997?text=Halo%2C%20saya%20ingin%20tanya%20tentang%20produk%20Alderon" class="alderon-cta" target="_blank" rel="noopener">
-          Tanya Ketersediaan
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
+        <div class="alderon-image-side reveal" id="alderonImageSide">
+          <img id="alderonFeaturedImg" alt="Alderon uPVC Roofing — PT. Prabu Inti Suksesindo">
+          <span class="alderon-image-tag">uPVC Twinwall</span>
+        </div>
       </div>
-      <div class="alderon-image-side" id="alderonImageSide">
-        <img id="alderonFeaturedImg" src="/images/hero/alderon_warehouse-4.png" alt="Alderon uPVC Roofing — PT. Prabu Inti Suksesindo" loading="lazy">
-      </div>
+
+      <!-- Numbered feature list -->
+      <ul class="alderon-features reveal">
+        <li class="alderon-feature-item"><span class="afi-num">01</span><span class="afi-text">Atap Sejuk — insulasi panas optimal</span></li>
+        <li class="alderon-feature-item"><span class="afi-num">02</span><span class="afi-text">Tahan UV &amp; Korosi — lapisan Laser Print</span></li>
+        <li class="alderon-feature-item"><span class="afi-num">03</span><span class="afi-text">Tidak Remuk Saat Hujan — dinding ganda kokoh</span></li>
+        <li class="alderon-feature-item"><span class="afi-num">04</span><span class="afi-text">Sistem Sambungan Anti Bocor</span></li>
+        <li class="alderon-feature-item"><span class="afi-num">05</span><span class="afi-text">Tersedia IDH 860 Coating · ID 860 · Evo 1000</span></li>
+      </ul>
     </div>
   </section>
 
@@ -155,9 +221,9 @@
     <div class="container">
       <div class="products-header">
         <div>
-          <div class="section-label reveal">Produk Kami</div>
-          <h2 class="section-title reveal">Temukan Produk<br>yang Tepat</h2>
-          <p class="section-desc reveal">Kami menyediakan lebih dari 26 varian bahan atap dan konstruksi berkualitas tinggi dari merek terpercaya.</p>
+          <div class="section-label reveal">Katalog Material</div>
+          <h2 class="section-title reveal">Material yang<br>Menahan Beban</h2>
+          <p class="section-desc reveal">Lebih dari 26 varian atap &amp; konstruksi dari merek terpercaya. Telusuri katalog lengkap kami.</p>
         </div>
         <div class="products-count" id="productsCount"></div>
       </div>
@@ -172,58 +238,56 @@
       <div class="section-label reveal">Portofolio</div>
       <h2 class="section-title reveal">Proyek yang<br>Telah Kami Kerjakan</h2>
       <p class="section-desc reveal">Kepercayaan klien kami tercermin dari berbagai proyek konstruksi di seluruh Indonesia.</p>
-      <div class="projects-grid">
-        <div class="project-card reveal" id="portfolioCard0">
-          <div class="portfolio-placeholder">
-            <span>Gudang Konstruksi</span>
-          </div>
-          <div class="project-label" id="portfolioLabel0">Gudang Konstruksi</div>
-        </div>
-        <div class="project-card reveal" id="portfolioCard1">
-          <div class="portfolio-placeholder">
-            <span>Bangunan Masjid</span>
-          </div>
-          <div class="project-label" id="portfolioLabel1">Bangunan Masjid</div>
-        </div>
-        <div class="project-card reveal" id="portfolioCard2">
-          <div class="portfolio-placeholder">
-            <span>Bangunan Gudang</span>
-          </div>
-          <div class="project-label" id="portfolioLabel2">Bangunan Gudang</div>
-        </div>
-      </div>
+      <div class="projects-grid" id="projectsGrid"></div>
     </div>
   </section>
 
   <!-- About -->
   <section class="about" id="tentang">
     <div class="container">
-      <div class="about-inner">
-        <div class="about-text reveal">
+      <!-- Editorial header -->
+      <div class="about-head reveal">
+        <div class="about-head-meta">
           <div class="section-label">Tentang Kami</div>
-          <h2 class="section-title">PRABU INTI<br><em style="font-style:italic;color:var(--accent)">Suksesindo</em></h2>
           <div class="about-motto">"All Roof Solution"</div>
-          <p>PT. Prabu Inti Suksesindo merupakan perusahaan yang berdiri sejak tahun 2011, bergerak di bidang supplier bahan bangunan — khususnya roofing, cladding, fiberglass, floordeck, roof truss, metal roof, insulation, wiremesh, dan aksesoris. Berlokasi di Kabupaten Tangerang.</p>
+        </div>
+        <h2 class="about-title">PRABU INTI<br><em>Suksesindo</em></h2>
+      </div>
+
+      <!-- Body: sticky meta column + editorial text -->
+      <div class="about-body">
+        <div class="about-aside reveal">
+          <div class="about-aside-row"><span class="about-aside-key">Berdiri</span><span class="about-aside-val">2011</span></div>
+          <div class="about-aside-row"><span class="about-aside-key">Lokasi</span><span class="about-aside-val">Kab. Tangerang</span></div>
+          <div class="about-aside-row"><span class="about-aside-key">Cakupan</span><span class="about-aside-val">Seluruh Indonesia</span></div>
+        </div>
+        <div class="about-text reveal">
+          <p class="about-lead">PT. Prabu Inti Suksesindo merupakan perusahaan yang berdiri sejak tahun 2011, bergerak di bidang supplier bahan bangunan — khususnya roofing, cladding, fiberglass, floordeck, roof truss, metal roof, insulation, wiremesh, dan aksesoris. Berlokasi di Kabupaten Tangerang.</p>
           <p>Kami menjadi afiliasi resmi dari PT. Kokoh Inti Forming yang memproduksi atap baja berkualitas, PT. Alderon (uPVC Twinwall), dan distributor resmi FiberLED, Tera Foil, serta Galvalex.</p>
           <p>Pelayanan kami telah menjangkau seluruh wilayah Indonesia — dari gudang industri, masjid, hingga proyek komersial berskala nasional.</p>
-          <p style="margin-top:16px">Motto kami: <strong style="color:var(--accent)">"Memberikan Kepuasan untuk Melayani Pelanggan."</strong></p>
+          <p class="about-quote">Motto kami: <strong>"Memberikan Kepuasan untuk Melayani Pelanggan."</strong></p>
         </div>
-        <div class="about-cards">
-          <div class="about-card reveal">
-            <div class="about-card-label">Visi Kami</div>
-            <h4>Terbesar, Terlengkap, Terpercaya</h4>
-            <p>Menjadikan PRABU INTI sebagai pionir usaha terpadu dalam spesialis serat fiber yang dikenal di seluruh Indonesia.</p>
-          </div>
-          <div class="about-card reveal">
-            <div class="about-card-label">Misi Kami</div>
-            <h4>Pusat Penjualan Atap Terpercaya</h4>
-            <p>Menyediakan segala kebutuhan bahan bangunan yang lengkap, memberikan suasana berbelanja yang nyaman, dan pelayanan yang memuaskan konsumen.</p>
-          </div>
-          <div class="about-card reveal">
-            <div class="about-card-label">Sertifikasi</div>
-            <h4>Berstandar SNI &amp; ISO 9001:2015</h4>
-            <p>Produk KOKOH telah memiliki sertifikasi SNI 4096:2007 dan ISO 9001:2015. Jaminan kualitas yang dapat dipertanggungjawabkan untuk setiap proyek Anda.</p>
-          </div>
+      </div>
+
+      <!-- Numbered index cards -->
+      <div class="about-cards">
+        <div class="about-card reveal">
+          <span class="about-card-num">01</span>
+          <div class="about-card-label">Visi Kami</div>
+          <h4>Terbesar, Terlengkap, Terpercaya</h4>
+          <p>Menjadikan PRABU INTI sebagai pionir usaha terpadu dalam spesialis serat fiber yang dikenal di seluruh Indonesia.</p>
+        </div>
+        <div class="about-card reveal">
+          <span class="about-card-num">02</span>
+          <div class="about-card-label">Misi Kami</div>
+          <h4>Pusat Penjualan Atap Terpercaya</h4>
+          <p>Menyediakan segala kebutuhan bahan bangunan yang lengkap, memberikan suasana berbelanja yang nyaman, dan pelayanan yang memuaskan konsumen.</p>
+        </div>
+        <div class="about-card reveal">
+          <span class="about-card-num">03</span>
+          <div class="about-card-label">Sertifikasi</div>
+          <h4>Berstandar SNI &amp; ISO 9001:2015</h4>
+          <p>Produk KOKOH telah memiliki sertifikasi SNI 4096:2007 dan ISO 9001:2015. Jaminan kualitas yang dapat dipertanggungjawabkan untuk setiap proyek Anda.</p>
         </div>
       </div>
     </div>
@@ -308,118 +372,123 @@
   <!-- FAQ -->
   <section class="faq" id="faq">
     <div class="container">
-      <div class="faq-inner">
-        <div>
-          <div class="section-label reveal">FAQ</div>
-          <h2 class="section-title reveal">Ada yang Ingin<br>Anda Tanyakan?</h2>
-          <p class="section-desc reveal">Pertanyaan umum seputar produk, pemesanan, dan pengiriman. Tidak menemukan jawaban? Hubungi kami langsung.</p>
-          <div style="margin-top:28px" class="reveal">
-            <a href="#kontak" class="btn btn-primary">Hubungi Kami</a>
+      <!-- Editorial header -->
+      <div class="faq-head reveal">
+        <div class="faq-head-meta">
+          <div class="section-label">FAQ</div>
+          <p class="faq-head-lead">Pertanyaan umum seputar produk, pemesanan, dan pengiriman. Tidak menemukan jawaban? <a href="#kontak">Hubungi kami langsung →</a></p>
+        </div>
+        <h2 class="faq-title">Ada yang Ingin<br><em>Anda Tanyakan?</em></h2>
+      </div>
+
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">01</span>
+            <span class="faq-q-text">Bagaimana cara memesan produk?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <p>Pemesanan dapat dilakukan melalui beberapa cara:</p>
+                <ol>
+                  <li>Hubungi CS kami via WhatsApp di <strong>085833339997</strong></li>
+                  <li>Isi form kontak di halaman ini</li>
+                  <li>Kunjungi langsung ke kantor & gudang kami di Tangerang</li>
+                </ol>
+                <p style="margin-top:10px">Tim kami akan membantu Anda memilih produk yang sesuai kebutuhan dan memberikan penawaran harga terbaik.</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="faq-list">
 
-          <div class="faq-item">
-            <button class="faq-question">
-              Bagaimana cara memesan produk?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <p>Pemesanan dapat dilakukan melalui beberapa cara:</p>
-                  <ol>
-                    <li>Hubungi CS kami via WhatsApp di <strong>085833339997</strong></li>
-                    <li>Isi form kontak di halaman ini</li>
-                    <li>Kunjungi langsung ke kantor & gudang kami di Tangerang</li>
-                  </ol>
-                  <p style="margin-top:10px">Tim kami akan membantu Anda memilih produk yang sesuai kebutuhan dan memberikan penawaran harga terbaik.</p>
-                </div>
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">02</span>
+            <span class="faq-q-text">Metode pembayaran apa saja yang tersedia?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <p>Kami menerima pembayaran melalui:</p>
+                <ul>
+                  <li>Transfer Bank BCA</li>
+                  <li>Pembayaran tunai (untuk pembelian langsung di gudang)</li>
+                </ul>
+                <p style="margin-top:10px">Bukti pembayaran dikirimkan melalui WhatsApp setelah transaksi selesai.</p>
               </div>
             </div>
           </div>
-
-          <div class="faq-item">
-            <button class="faq-question">
-              Metode pembayaran apa saja yang tersedia?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <p>Kami menerima pembayaran melalui:</p>
-                  <ul>
-                    <li>Transfer Bank BCA</li>
-                    <li>Pembayaran tunai (untuk pembelian langsung di gudang)</li>
-                  </ul>
-                  <p style="margin-top:10px">Bukti pembayaran dikirimkan melalui WhatsApp setelah transaksi selesai.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-question">
-              Apakah melayani pengiriman ke luar kota?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <p>Ya, kami melayani pengiriman ke seluruh wilayah Indonesia. Ongkos kirim akan disesuaikan dengan lokasi tujuan dan volume pesanan. Hubungi CS kami untuk mendapatkan estimasi biaya pengiriman.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-question">
-              Bagaimana cara membersihkan produk atap?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <p>Serbuk besi atau metal akibat kegiatan pengeboran/pemotongan harus segera dibersihkan dari permukaan atap untuk menghindari karat. Kotoran keras yang melekat pada bahan atap dapat dibersihkan menggunakan air bersih dan kain lembut. Hindari bahan kimia keras.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-question">
-              Bagaimana cara penyimpanan yang benar?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <ul>
-                    <li>Hindari penumpukan lembaran atap langsung di tanah</li>
-                    <li>Kelompokkan berdasarkan type dan ukuran masing-masing</li>
-                    <li>Letakkan di atas balok kayu dengan posisi landai untuk menghindari genangan air</li>
-                    <li>Simpan di tempat yang terlindung dari paparan cuaca langsung</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-question">
-              Apakah bisa request harga produk?
-              <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-body">
-              <div class="faq-body-inner">
-                <div class="faq-answer">
-                  <p>Tentu. Hubungi CS kami via WhatsApp dengan menyebutkan jenis produk, ukuran, dan jumlah yang dibutuhkan. Kami akan memberikan penawaran harga yang kompetitif sesuai kebutuhan proyek Anda.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">03</span>
+            <span class="faq-q-text">Apakah melayani pengiriman ke luar kota?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <p>Ya, kami melayani pengiriman ke seluruh wilayah Indonesia. Ongkos kirim akan disesuaikan dengan lokasi tujuan dan volume pesanan. Hubungi CS kami untuk mendapatkan estimasi biaya pengiriman.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">04</span>
+            <span class="faq-q-text">Bagaimana cara membersihkan produk atap?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <p>Serbuk besi atau metal akibat kegiatan pengeboran/pemotongan harus segera dibersihkan dari permukaan atap untuk menghindari karat. Kotoran keras yang melekat pada bahan atap dapat dibersihkan menggunakan air bersih dan kain lembut. Hindari bahan kimia keras.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">05</span>
+            <span class="faq-q-text">Bagaimana cara penyimpanan yang benar?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <ul>
+                  <li>Hindari penumpukan lembaran atap langsung di tanah</li>
+                  <li>Kelompokkan berdasarkan type dan ukuran masing-masing</li>
+                  <li>Letakkan di atas balok kayu dengan posisi landai untuk menghindari genangan air</li>
+                  <li>Simpan di tempat yang terlindung dari paparan cuaca langsung</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span class="faq-num">06</span>
+            <span class="faq-q-text">Apakah bisa request harga produk?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-body">
+            <div class="faq-body-inner">
+              <div class="faq-answer">
+                <p>Tentu. Hubungi CS kami via WhatsApp dengan menyebutkan jenis produk, ukuran, dan jumlah yang dibutuhkan. Kami akan memberikan penawaran harga yang kompetitif sesuai kebutuhan proyek Anda.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -427,47 +496,56 @@
   <!-- Contact -->
   <section class="contact" id="kontak">
     <div class="container">
-      <div class="contact-inner">
-        <div>
-          <div class="section-label reveal">Kontak</div>
-          <h2 class="section-title reveal">Hubungi<br>Kami</h2>
-          <div class="contact-info-row reveal">
-            <div class="contact-info-item">
-              <span class="contact-info-label">Kantor &amp; Gudang</span>
-              <span class="contact-info-value">
-                Jl. Raya Korelet RT. 09 RW. 03 No. 7<br>
-                Kp. Ranca Serdang, Desa Ranca Iyuh<br>
-                Panongan Curug – Tangerang 15710<br>
-                <em style="font-style:normal;color:var(--text-3);font-size:12px;">(Dekat Pasar Korelet)</em>
-              </span>
-            </div>
-            <div class="contact-info-item">
-              <span class="contact-info-label">WhatsApp / Telepon</span>
-              <span class="contact-info-value">
-                <a href="https://wa.me/6285833339997">085833339997</a><br>
-                <a href="tel:085101460580">085101460580</a> &nbsp;·&nbsp; <a href="tel:085106018168">085106018168</a>
-              </span>
-            </div>
-            <div class="contact-info-item">
-              <span class="contact-info-label">Email</span>
-              <span class="contact-info-value">
-                <a href="mailto:intiatap.umum@gmail.com">intiatap.umum@gmail.com</a>
-              </span>
-            </div>
-            <div class="contact-info-item">
-              <span class="contact-info-label">Pembayaran Via</span>
-              <span class="contact-info-value">Bank BCA</span>
-            </div>
-          </div>
-          <div class="contact-map reveal">
-            <iframe
-              src="https://maps.google.com/maps?q=PT+Inti+Atap+Suksesindo+Tangerang&output=embed&t=m&z=15"
-              title="Lokasi PT. Prabu Inti Suksesindo"
-              allowfullscreen
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
-          </div>
+      <!-- Editorial header -->
+      <div class="contact-head reveal">
+        <div class="contact-head-meta">
+          <div class="section-label">Kontak</div>
+          <p class="contact-head-lead">Punya pertanyaan atau ingin minta penawaran? Tim kami siap membantu — responsif dan ramah.</p>
+        </div>
+        <h2 class="contact-title">Hubungi<br><em>Kami</em></h2>
+      </div>
+
+      <!-- Info strip: hairline-divided columns -->
+      <div class="contact-info-grid reveal">
+        <div class="contact-info-item">
+          <span class="contact-info-label">Kantor &amp; Gudang</span>
+          <span class="contact-info-value">
+            Jl. Raya Korelet RT. 09 RW. 03 No. 7<br>
+            Kp. Ranca Serdang, Desa Ranca Iyuh<br>
+            Panongan Curug – Tangerang 15710<br>
+            <em style="font-style:normal;color:var(--text-3);font-size:12px;">(Dekat Pasar Korelet)</em>
+          </span>
+        </div>
+        <div class="contact-info-item">
+          <span class="contact-info-label">WhatsApp / Telepon</span>
+          <span class="contact-info-value">
+            <a href="https://wa.me/6285833339997">085833339997</a><br>
+            <a href="tel:085101460580">085101460580</a><br>
+            <a href="tel:085106018168">085106018168</a>
+          </span>
+        </div>
+        <div class="contact-info-item">
+          <span class="contact-info-label">Email</span>
+          <span class="contact-info-value">
+            <a href="mailto:intiatap.umum@gmail.com">intiatap.umum@gmail.com</a>
+          </span>
+        </div>
+        <div class="contact-info-item">
+          <span class="contact-info-label">Pembayaran Via</span>
+          <span class="contact-info-value">Bank BCA</span>
+        </div>
+      </div>
+
+      <!-- Map + WhatsApp CTA -->
+      <div class="contact-body">
+        <div class="contact-map reveal">
+          <iframe
+            src="https://maps.google.com/maps?q=PT+Inti+Atap+Suksesindo+Tangerang&output=embed&t=m&z=15"
+            title="Lokasi PT. Prabu Inti Suksesindo"
+            allowfullscreen
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
         </div>
         <div class="contact-wa-cta reveal">
           <div class="contact-wa-inner">
@@ -529,6 +607,120 @@
       </div>
     </div>
   </footer>
+
+  <!-- Product Detail Overlay (populated via JS) -->
+  <div class="pd" id="productDetail" aria-hidden="true">
+    <div class="pd-backdrop" data-pd-close></div>
+    <div class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="pdName">
+      <button class="pd-close" id="pdClose" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="pd-scroll" id="pdScroll">
+        <div class="pd-hero">
+          <div class="pd-hero-media">
+            <img id="pdImg" alt="" />
+          </div>
+          <div class="pd-hero-info">
+            <span class="pd-cat" id="pdCat"></span>
+            <h2 class="pd-name" id="pdName"></h2>
+            <p class="pd-desc" id="pdDesc"></p>
+            <a class="pd-cta" id="pdCta" target="_blank" rel="noopener">
+              Minta Penawaran
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="pd-projects" id="pdProjects" hidden>
+          <div class="pd-projects-hd">
+            <span class="pd-projects-label">Portofolio</span>
+            <h3 class="pd-projects-title">Proyek yang Menggunakan Produk Ini</h3>
+          </div>
+          <div class="pd-projects-list" id="pdProjectsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Detail Overlay (populated via JS) -->
+  <div class="pd" id="projectDetail" aria-hidden="true">
+    <div class="pd-backdrop" data-prj-close></div>
+    <div class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="prjName">
+      <button class="pd-close" id="prjClose" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="pd-scroll" id="prjScroll">
+        <div class="pd-hero">
+          <div class="pd-hero-media">
+            <img id="prjHeroImg" alt="" />
+          </div>
+          <div class="pd-hero-info">
+            <span class="pd-cat">Portofolio Proyek</span>
+            <h2 class="pd-name" id="prjName"></h2>
+            <div class="prj-meta" id="prjMeta"></div>
+            <p class="pd-desc" id="prjDesc"></p>
+          </div>
+        </div>
+        <div class="pd-projects" id="prjProducts" hidden>
+          <div class="pd-projects-hd">
+            <span class="pd-projects-label">Material</span>
+            <h3 class="pd-projects-title">Produk yang Digunakan</h3>
+          </div>
+          <div class="prj-products-grid" id="prjProductsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- News Detail Overlay (populated via JS) -->
+  <div class="pd" id="newsDetail" aria-hidden="true">
+    <div class="pd-backdrop" data-nd-close></div>
+    <div class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
+      <button class="pd-close" id="ndClose" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="pd-scroll" id="ndScroll">
+        <div class="nd-hero-media" id="ndMedia"></div>
+        <div class="nd-body">
+          <div class="nd-date" id="ndDate"></div>
+          <h2 class="nd-title" id="ndTitle"></h2>
+          <p class="nd-desc" id="ndDesc"></p>
+
+          <div class="nd-comments">
+            <h3 class="nd-comments-title">Komentar <span id="ndCount" class="nd-count"></span></h3>
+            <div class="nd-comment-list" id="ndCommentList"></div>
+            <div class="nd-compose" id="ndCompose"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox for project images -->
+  <div class="pdlb" id="pdLightbox" aria-hidden="true">
+    <button class="pdlb-close" id="pdlbClose" aria-label="Tutup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <img id="pdlbImg" alt="" />
+  </div>
+
+  <!-- Floating News Rail — fixed to the right edge, collapsible.
+       Populated via JS (initNews). Hidden until there is news to show. -->
+  <aside class="news-rail" id="newsRail" hidden aria-label="Berita terkini">
+    <button class="news-rail-tab" id="newsRailToggle" aria-expanded="false" aria-controls="newsRailPanel">
+      <span class="news-rail-tab-dot"></span>
+      <span class="news-rail-tab-text">BERITA</span>
+      <span class="news-rail-tab-count" id="newsRailCount"></span>
+    </button>
+    <div class="news-rail-panel" id="newsRailPanel">
+      <div class="news-rail-hd">
+        <span class="news-rail-hd-title">Kabar Terbaru</span>
+        <button class="news-rail-close" id="newsRailClose" aria-label="Tutup berita">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="news-rail-list" id="newsRailList"></div>
+    </div>
+  </aside>
 
   <!-- WhatsApp Float -->
   <a href="https://wa.me/6285833339997" class="wa-float" target="_blank" rel="noopener" aria-label="Chat WhatsApp">

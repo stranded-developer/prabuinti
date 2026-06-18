@@ -28,6 +28,24 @@ function verifyJwt(token) {
   } catch { return false; }
 }
 
+// --- Visitor (phone-verified) tokens, used for commenting on news ---
+function signUserToken(phone, name) {
+  const h = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const p = b64u(JSON.stringify({ phone, name: name || '', exp: Math.floor(Date.now() / 1000) + 30 * 24 * 3600 }));
+  const s = crypto.createHmac('sha256', JWT_SECRET).update(h + '.' + p).digest('base64url');
+  return h + '.' + p + '.' + s;
+}
+function verifyUserToken(token) {
+  try {
+    const [h, p, s] = (token || '').split('.');
+    const expected = crypto.createHmac('sha256', JWT_SECRET).update(h + '.' + p).digest('base64url');
+    if (s !== expected) return null;
+    const payload = JSON.parse(Buffer.from(p, 'base64url').toString());
+    if (!payload.phone || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    return { phone: payload.phone, name: payload.name || '' };
+  } catch { return null; }
+}
+
 // ============================================================
 // Firebase — optional. Falls back to local JSON files in dev.
 // Set FIREBASE_PRIVATE_KEY env var to activate.
@@ -41,14 +59,11 @@ if (process.env.FIREBASE_PRIVATE_KEY) {
       credential: admin.credential.cert({
         projectId:   process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey:  process.env.FIREBASE_PRIVATE_KEY
-                       .replace(/^["']|["']$/g, '')
-                       .replace(/\\n/g, '\n'),
+        privateKey:  process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
-    const { getFirestore } = require('firebase-admin/firestore');
-    _db     = getFirestore();
+    _db     = admin.firestore();
     _bucket = admin.storage().bucket();
     console.log('  Firebase: Firestore + Storage aktif');
   } catch (e) {
@@ -62,8 +77,13 @@ const USE_FB = !!_db;
 // Local file paths (dev fallback when Firebase not configured)
 // ============================================================
 const PRODUCTS_FILE  = path.join(__dirname, 'data', 'products.json');
+const CATEGORIES_FILE = path.join(__dirname, 'data', 'categories.json');
 const DOCUMENTS_FILE = path.join(__dirname, 'data', 'documents.json');
 const HOMEPAGE_FILE  = path.join(__dirname, 'data', 'homepage.json');
+const PROJECTS_FILE  = path.join(__dirname, 'data', 'projects.json');
+const NEWS_FILE      = path.join(__dirname, 'data', 'news.json');
+const COMMENTS_FILE  = path.join(__dirname, 'data', 'comments.json');
+const USERS_FILE     = path.join(__dirname, 'data', 'users.json');
 const UPLOADS_DIR    = path.join(__dirname, 'uploads');
 const DOCS_DIR       = path.join(__dirname, 'docs');
 
@@ -77,15 +97,8 @@ const writeLocalJSON = (f, d) => { try { fs.writeFileSync(f, JSON.stringify(d, n
 // Ensure homepage.json exists locally
 if (!fs.existsSync(HOMEPAGE_FILE)) {
   writeLocalJSON(HOMEPAGE_FILE, {
-    heroImages: [
-      '/images/hero/kokoh_cover-01.png',
-      '/images/hero/alderon_cover-1.png',
-      '/images/hero/alderon_innovation-2.png',
-      '/images/hero/alderon_warehouse-4.png',
-      '/images/hero/fiberled_factory-1.png',
-      '/images/hero/kokoh_colors-09.png',
-    ],
-    alderonImage: '/images/hero/alderon_warehouse-4.png',
+    heroVideo: '',
+    alderonImage: '',
     portfolio: [
       { image: '', title: 'Gudang Konstruksi' },
       { image: '', title: 'Bangunan Masjid' },
@@ -94,19 +107,39 @@ if (!fs.existsSync(HOMEPAGE_FILE)) {
   });
 }
 
+// Ensure categories.json exists locally (default catalog of product categories)
+if (!fs.existsSync(CATEGORIES_FILE)) {
+  writeLocalJSON(CATEGORIES_FILE, [
+    { id: 1, name: 'Roofing & Cladding', order: 1 },
+    { id: 2, name: 'Floor Deck',         order: 2 },
+    { id: 3, name: 'Roof Truss',         order: 3 },
+    { id: 4, name: 'Fiber Glass',        order: 4 },
+    { id: 5, name: 'Insulasi',           order: 5 },
+    { id: 6, name: 'Wiremesh',           order: 6 },
+    { id: 7, name: 'Alderon uPVC',       order: 7 },
+  ]);
+}
+
 // ============================================================
 // Firebase helpers
 // ============================================================
+// Uploaded files get unique hashed names and are never overwritten, so they're
+// safe to cache forever. Without this, Firebase Storage serves them as
+// `private, max-age=0`, forcing the browser to re-download the (potentially
+// 20MB+) video every time — e.g. opening a news detail re-fetches the exact
+// same clip already loaded in the marquee. immutable caching makes those reuse.
+const STORAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 async function fbUploadFile(buffer, mimetype, folder, ext, isPublic = true) {
   const filename = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + ext;
   const file = _bucket.file(folder + '/' + filename);
   if (isPublic) {
     const token = crypto.randomUUID();
-    await file.save(buffer, { metadata: { contentType: mimetype, metadata: { firebaseStorageDownloadTokens: token } } });
+    await file.save(buffer, { metadata: { contentType: mimetype, cacheControl: STORAGE_CACHE_CONTROL, metadata: { firebaseStorageDownloadTokens: token } } });
     const url = `https://firebasestorage.googleapis.com/v0/b/${_bucket.name}/o/${encodeURIComponent(folder + '/' + filename)}?alt=media&token=${token}`;
     return { filename, url };
   }
-  await file.save(buffer, { metadata: { contentType: mimetype } });
+  await file.save(buffer, { metadata: { contentType: mimetype, cacheControl: STORAGE_CACHE_CONTROL } });
   return { filename, url: null };
 }
 
@@ -120,6 +153,22 @@ async function fbSignedUrl(folder, filename, expiresMs) {
     expires: expiresMs,
   });
   return url;
+}
+
+// Allow the browser to PUT directly to the Storage bucket via signed URLs
+// (used for large hero-video uploads). Best-effort; runs once at startup.
+async function ensureBucketCors() {
+  try {
+    await _bucket.setCorsConfiguration([{
+      origin:         ['*'],
+      method:         ['GET', 'PUT'],
+      responseHeader: ['Content-Type'],
+      maxAgeSeconds:  3600,
+    }]);
+    console.log('  Storage: CORS dikonfigurasi untuk upload langsung');
+  } catch (e) {
+    console.error('  Storage CORS error:', e.message);
+  }
 }
 
 // Seed Firestore from local JSON on first cold start (runs once when collection empty)
@@ -136,6 +185,17 @@ async function seedFirestore() {
       }
     }
 
+    const catSnap = await _db.collection('categories').limit(1).get();
+    if (catSnap.empty) {
+      const cats = readLocalJSON(CATEGORIES_FILE) || [];
+      if (cats.length) {
+        const batch = _db.batch();
+        cats.forEach(c => batch.set(_db.collection('categories').doc(String(c.id)), c));
+        await batch.commit();
+        console.log(`  Firestore: seeded ${cats.length} categories`);
+      }
+    }
+
     const docsSnap = await _db.collection('documents').limit(1).get();
     if (docsSnap.empty) {
       const docs = readLocalJSON(DOCUMENTS_FILE) || [];
@@ -144,6 +204,28 @@ async function seedFirestore() {
         docs.forEach(d => batch.set(_db.collection('documents').doc(String(d.id)), d));
         await batch.commit();
         console.log(`  Firestore: seeded ${docs.length} documents`);
+      }
+    }
+
+    const projectsSnap = await _db.collection('projects').limit(1).get();
+    if (projectsSnap.empty) {
+      const projects = readLocalJSON(PROJECTS_FILE) || [];
+      if (projects.length) {
+        const batch = _db.batch();
+        projects.forEach(p => batch.set(_db.collection('projects').doc(String(p.id)), p));
+        await batch.commit();
+        console.log(`  Firestore: seeded ${projects.length} projects`);
+      }
+    }
+
+    const newsSnap = await _db.collection('news').limit(1).get();
+    if (newsSnap.empty) {
+      const news = readLocalJSON(NEWS_FILE) || [];
+      if (news.length) {
+        const batch = _db.batch();
+        news.forEach(n => batch.set(_db.collection('news').doc(String(n.id)), n));
+        await batch.commit();
+        console.log(`  Firestore: seeded ${news.length} news`);
       }
     }
 
@@ -167,6 +249,36 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireUser(req, res, next) {
+  const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  const user  = verifyUserToken(token);
+  if (!user) return res.status(401).json({ error: 'Verifikasi nomor diperlukan' });
+  req.user = user;
+  next();
+}
+
+// --- Visitor name lookup (works in both Firebase and local modes) ---
+async function getUserName(phone) {
+  if (USE_FB) {
+    const snap = await _db.collection('users').doc(phone).get();
+    return snap.exists ? (snap.data().name || '') : '';
+  }
+  const list = readLocalJSON(USERS_FILE) || [];
+  const u = list.find(x => x.phone === phone);
+  return u ? (u.name || '') : '';
+}
+async function setUserName(phone, name) {
+  if (USE_FB) {
+    await _db.collection('users').doc(phone).set({ phone, name }, { merge: true });
+    return;
+  }
+  const list = readLocalJSON(USERS_FILE) || [];
+  const i = list.findIndex(x => x.phone === phone);
+  if (i >= 0) list[i].name = name;
+  else list.push({ phone, name });
+  writeLocalJSON(USERS_FILE, list);
+}
+
 // ============================================================
 // Multer — memory storage so we can route to disk or Firebase
 // ============================================================
@@ -180,6 +292,12 @@ const uploadPDF = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_, f, cb) => f.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Hanya PDF')),
+});
+
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_, f, cb) => f.mimetype.startsWith('video/') ? cb(null, true) : cb(new Error('Hanya video')),
 });
 
 // ============================================================
@@ -219,8 +337,59 @@ async function sendWhatsApp(phone, message) {
 // Middleware
 // ============================================================
 app.use(express.json());
+
+// ------------------------------------------------------------
+// Homepage HTML with the hero video URL inlined.
+//
+// Without this, the browser only learns the video URL after:
+//   index.html -> main.js (download+parse) -> fetch /api/homepage
+//   -> serverless cold start + Firestore read -> set <video src>.
+// That whole chain runs before a single byte of video is fetched.
+//
+// Here we read the homepage config server-side (cached briefly) and bake the
+// src/poster straight into the <video> tag, so the download starts during
+// HTML parse — in parallel with main.js — instead of after it.
+// ------------------------------------------------------------
+const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+let _hpCache = { at: 0, data: null };
+async function getHomepageConfig() {
+  if (_hpCache.data && Date.now() - _hpCache.at < 60_000) return _hpCache.data;
+  let data = {};
+  try {
+    if (USE_FB) {
+      const snap = await _db.collection('config').doc('homepage').get();
+      data = snap.exists ? snap.data() : {};
+    } else {
+      data = readLocalJSON(HOMEPAGE_FILE) || {};
+    }
+  } catch {}
+  _hpCache = { at: Date.now(), data };
+  return data;
+}
+const escAttr = s => String(s)
+  .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+app.get(['/', '/index.html'], async (_, res) => {
+  let attrs = '';
+  try {
+    const hp = await getHomepageConfig();
+    if (hp && hp.heroVideo) {
+      attrs = `src="${escAttr(hp.heroVideo)}"`;
+      if (hp.heroPoster) attrs += ` poster="${escAttr(hp.heroPoster)}"`;
+    }
+  } catch {}
+  res.set('Cache-Control', 'no-cache');
+  // Replace the placeholder only where it sits on the <video> tag, so a stray
+  // mention elsewhere (e.g. a comment) can never absorb the substitution.
+  res.type('html').send(INDEX_HTML.replace(' __HERO_VIDEO_ATTRS__>', attrs ? ' ' + attrs + '>' : '>'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
-if (!USE_FB) app.use('/uploads', express.static(UPLOADS_DIR));
+// Uploaded files have unique hashed names and never change → cache hard so the
+// news detail video (and product images) reuse the marquee's already-downloaded
+// bytes instead of revalidating.
+if (!USE_FB) app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d', immutable: true }));
 
 app.get('/dokumen', (_, res) => res.sendFile(path.join(__dirname, 'public', 'dokumen.html')));
 app.get('/admin',   (_, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
@@ -263,13 +432,13 @@ app.post('/api/products', requireAuth, async (req, res) => {
     if (USE_FB) {
       const snap  = await _db.collection('products').get();
       const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
-      const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '' };
+      const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '', projectIds: Array.isArray(req.body.projectIds) ? req.body.projectIds : [] };
       await _db.collection('products').doc(String(item.id)).set(item);
       return res.status(201).json(item);
     }
     const list  = readLocalJSON(PRODUCTS_FILE) || [];
     const maxId = list.reduce((m, p) => Math.max(m, p.id), 0);
-    const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '' };
+    const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '', projectIds: Array.isArray(req.body.projectIds) ? req.body.projectIds : [] };
     list.push(item);
     writeLocalJSON(PRODUCTS_FILE, list);
     res.status(201).json(item);
@@ -321,6 +490,111 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// Categories (product categories — managed from the back office)
+// Model: { id, name, order }. Products reference a category by its name.
+// ============================================================
+async function readCategories() {
+  if (USE_FB) {
+    const snap = await _db.collection('categories').get();
+    return snap.docs.map(d => d.data()).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+  const list = readLocalJSON(CATEGORIES_FILE) || [];
+  return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+app.get('/api/categories', async (_, res) => {
+  try {
+    res.json(await readCategories());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+    const list = await readCategories();
+    if (list.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ error: 'Kategori sudah ada' });
+    }
+    const maxId    = list.reduce((m, c) => Math.max(m, c.id || 0), 0);
+    const maxOrder = list.reduce((m, c) => Math.max(m, c.order || 0), 0);
+    const item = { id: maxId + 1, name, order: maxOrder + 1 };
+    if (USE_FB) {
+      await _db.collection('categories').doc(String(item.id)).set(item);
+    } else {
+      writeLocalJSON(CATEGORIES_FILE, [...(readLocalJSON(CATEGORIES_FILE) || []), item]);
+    }
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Rename a category — cascades the new name to every product using the old one.
+app.put('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const id   = Number(req.params.id);
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+    const list = await readCategories();
+    const cat  = list.find(c => c.id === id);
+    if (!cat) return res.status(404).json({ error: 'Kategori tidak ditemukan' });
+    if (list.some(c => c.id !== id && c.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ error: 'Kategori sudah ada' });
+    }
+    const oldName = cat.name;
+    const updated = { ...cat, name };
+    if (USE_FB) {
+      await _db.collection('categories').doc(String(id)).set(updated);
+      if (oldName !== name) {
+        const prods = await _db.collection('products').where('category', '==', oldName).get();
+        if (!prods.empty) {
+          const batch = _db.batch();
+          prods.forEach(d => batch.update(d.ref, { category: name }));
+          await batch.commit();
+        }
+      }
+    } else {
+      const cats = (readLocalJSON(CATEGORIES_FILE) || []).map(c => c.id === id ? updated : c);
+      writeLocalJSON(CATEGORIES_FILE, cats);
+      if (oldName !== name) {
+        const prods = (readLocalJSON(PRODUCTS_FILE) || []).map(p => p.category === oldName ? { ...p, category: name } : p);
+        writeLocalJSON(PRODUCTS_FILE, prods);
+      }
+    }
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (USE_FB) {
+      await _db.collection('categories').doc(String(id)).delete();
+    } else {
+      writeLocalJSON(CATEGORIES_FILE, (readLocalJSON(CATEGORIES_FILE) || []).filter(c => c.id !== id));
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reorder — body: { ids: [orderedIds...] }. Sets each category's order to its index.
+app.put('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number) : null;
+    if (!ids) return res.status(400).json({ error: 'ids harus berupa array' });
+    if (USE_FB) {
+      const batch = _db.batch();
+      ids.forEach((id, i) => batch.update(_db.collection('categories').doc(String(id)), { order: i + 1 }));
+      await batch.commit();
+    } else {
+      const byId = new Map((readLocalJSON(CATEGORIES_FILE) || []).map(c => [c.id, c]));
+      ids.forEach((id, i) => { const c = byId.get(id); if (c) c.order = i + 1; });
+      writeLocalJSON(CATEGORIES_FILE, [...byId.values()]);
+    }
+    res.json(await readCategories());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Upload image
 // ============================================================
 app.post('/api/upload', requireAuth, uploadImg.single('image'), async (req, res) => {
@@ -332,6 +606,62 @@ app.post('/api/upload', requireAuth, uploadImg.single('image'), async (req, res)
       return res.json({ url });
     }
     const filename = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(req.file.originalname);
+    fs.writeFileSync(path.join(UPLOADS_DIR, filename), req.file.buffer);
+    res.json({ url: '/uploads/' + filename });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// Upload video (hero background)
+//
+// In production on Firebase, the browser uploads the file *directly* to
+// Cloud Storage via a signed URL. This bypasses the serverless function's
+// 4.5MB request-body limit, which a typical MP4 would exceed.
+//   1. POST /api/upload/video/init   -> { mode:'signed', uploadUrl, objectPath, contentType }
+//   2. browser PUTs the file to uploadUrl
+//   3. POST /api/upload/video/finalize { objectPath } -> { url } (sets public token)
+//
+// In local dev (no Firebase) it falls back to a normal multipart upload.
+// ============================================================
+app.post('/api/upload/video/init', requireAuth, async (req, res) => {
+  try {
+    if (!USE_FB) return res.json({ mode: 'direct' });
+    const contentType = (req.body && req.body.contentType) || 'video/mp4';
+    let ext = (req.body && req.body.ext) || '.mp4';
+    if (!/^\.[a-z0-9]{2,5}$/i.test(ext)) ext = '.mp4';
+    const objectPath = 'uploads/' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + ext;
+    const [uploadUrl] = await _bucket.file(objectPath).getSignedUrl({
+      version: 'v4',
+      action:  'write',
+      expires: Date.now() + 15 * 60 * 1000,
+      contentType,
+    });
+    res.json({ mode: 'signed', uploadUrl, objectPath, contentType });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/upload/video/finalize', requireAuth, async (req, res) => {
+  try {
+    if (!USE_FB) return res.status(400).json({ error: 'Tidak tersedia' });
+    const objectPath = req.body && req.body.objectPath;
+    if (!objectPath || !objectPath.startsWith('uploads/')) return res.status(400).json({ error: 'Path tidak valid' });
+    const token = crypto.randomUUID();
+    await _bucket.file(objectPath).setMetadata({ cacheControl: STORAGE_CACHE_CONTROL, metadata: { firebaseStorageDownloadTokens: token } });
+    const url = `https://firebasestorage.googleapis.com/v0/b/${_bucket.name}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`;
+    res.json({ url });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Multipart fallback (local dev only — small enough for the function limit)
+app.post('/api/upload/video', requireAuth, uploadVideo.single('video'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Tidak ada file' });
+    if (USE_FB) {
+      const ext = path.extname(req.file.originalname) || '.mp4';
+      const { url } = await fbUploadFile(req.file.buffer, req.file.mimetype, 'uploads', ext);
+      return res.json({ url });
+    }
+    const filename = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + (path.extname(req.file.originalname) || '.mp4');
     fs.writeFileSync(path.join(UPLOADS_DIR, filename), req.file.buffer);
     res.json({ url: '/uploads/' + filename });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -454,7 +784,7 @@ app.post('/api/otp/send', async (req, res) => {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     otpStore.set(normalized, { otp, docId: Number(docId), expires: Date.now() + 5 * 60_000, attempts: 0, lastSent: Date.now() });
-    await sendWhatsApp(normalized, `Kode OTP unduhan dokumen Prabu Inti Anda:\n\n*${otp}*\n\nBerlaku 5 menit. Jangan bagikan kode ini ke siapapun.`);
+    await sendWhatsApp(normalized, `Kode OTP unduhan dokumen Inti Atap Anda:\n\n*${otp}*\n\nBerlaku 5 menit. Jangan bagikan kode ini ke siapapun.`);
     res.json({ ok: true, dev: !FONNTE_TOKEN });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -534,6 +864,8 @@ app.put('/api/homepage', requireAuth, async (req, res) => {
       const ref  = _db.collection('config').doc('homepage');
       const snap = await ref.get();
       const data = snap.exists ? snap.data() : {};
+      if (req.body.heroVideo !== undefined)    data.heroVideo    = req.body.heroVideo;
+      if (req.body.heroPoster !== undefined)   data.heroPoster   = req.body.heroPoster;
       if (Array.isArray(req.body.heroImages))  data.heroImages   = req.body.heroImages;
       if (req.body.alderonImage !== undefined) data.alderonImage = req.body.alderonImage;
       if (Array.isArray(req.body.portfolio))   data.portfolio    = req.body.portfolio;
@@ -541,6 +873,8 @@ app.put('/api/homepage', requireAuth, async (req, res) => {
       return res.json(data);
     }
     const data = readLocalJSON(HOMEPAGE_FILE) || {};
+    if (req.body.heroVideo !== undefined)    data.heroVideo    = req.body.heroVideo;
+    if (req.body.heroPoster !== undefined)   data.heroPoster   = req.body.heroPoster;
     if (Array.isArray(req.body.heroImages))  data.heroImages   = req.body.heroImages;
     if (req.body.alderonImage !== undefined) data.alderonImage = req.body.alderonImage;
     if (Array.isArray(req.body.portfolio))   data.portfolio    = req.body.portfolio;
@@ -550,13 +884,325 @@ app.put('/api/homepage', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// Projects (referensi proyek — each has a title + multiple images)
+// ============================================================
+app.get('/api/projects', async (_, res) => {
+  try {
+    if (USE_FB) {
+      const snap = await _db.collection('projects').orderBy('id').get();
+      return res.json(snap.docs.map(d => d.data()));
+    }
+    res.json(readLocalJSON(PROJECTS_FILE) || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/projects', requireAuth, async (req, res) => {
+  try {
+    const images     = Array.isArray(req.body.images) ? req.body.images : [];
+    const productIds  = Array.isArray(req.body.productIds) ? req.body.productIds : [];
+    const year        = req.body.year || '';
+    const location    = req.body.location || '';
+    const description = req.body.description || '';
+    if (USE_FB) {
+      const snap  = await _db.collection('projects').get();
+      const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
+      const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
+      await _db.collection('projects').doc(String(item.id)).set(item);
+      return res.status(201).json(item);
+    }
+    const list  = readLocalJSON(PROJECTS_FILE) || [];
+    const maxId = list.reduce((m, p) => Math.max(m, p.id), 0);
+    const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
+    list.push(item);
+    writeLocalJSON(PROJECTS_FILE, list);
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/projects/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const patch = {};
+    if (req.body.title !== undefined)        patch.title       = req.body.title;
+    if (req.body.year !== undefined)         patch.year        = req.body.year;
+    if (req.body.location !== undefined)     patch.location    = req.body.location;
+    if (req.body.description !== undefined)  patch.description = req.body.description;
+    if (Array.isArray(req.body.images))      patch.images   = req.body.images;
+    if (Array.isArray(req.body.productIds))  patch.productIds = req.body.productIds;
+    if (USE_FB) {
+      const ref  = _db.collection('projects').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+      const updated = { ...snap.data(), ...patch, id };
+      await ref.set(updated);
+      return res.json(updated);
+    }
+    const list = readLocalJSON(PROJECTS_FILE) || [];
+    const idx  = list.findIndex(p => p.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    list[idx] = { ...list[idx], ...patch, id };
+    writeLocalJSON(PROJECTS_FILE, list);
+    res.json(list[idx]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/projects/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (USE_FB) {
+      const ref  = _db.collection('projects').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+      await ref.delete();
+      return res.json({ ok: true });
+    }
+    const list = readLocalJSON(PROJECTS_FILE) || [];
+    if (!list.find(p => p.id === id)) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    writeLocalJSON(PROJECTS_FILE, list.filter(p => p.id !== id));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// News (berita — title, photo/video, description, date)
+// ============================================================
+function newsFields(body) {
+  return {
+    title:       body.title || '',
+    mediaType:   body.mediaType === 'video' ? 'video' : 'image',
+    media:       body.media || '',
+    mediaPoster: body.mediaPoster || '',
+    description: body.description || '',
+    date:        body.date || new Date().toISOString().slice(0, 10),
+  };
+}
+
+app.get('/api/news', async (_, res) => {
+  try {
+    if (USE_FB) {
+      const snap = await _db.collection('news').orderBy('date', 'desc').get();
+      return res.json(snap.docs.map(d => d.data()));
+    }
+    const list = readLocalJSON(NEWS_FILE) || [];
+    list.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/news', requireAuth, async (req, res) => {
+  try {
+    if (USE_FB) {
+      const snap  = await _db.collection('news').get();
+      const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
+      const item  = { id: maxId + 1, ...newsFields(req.body) };
+      await _db.collection('news').doc(String(item.id)).set(item);
+      return res.status(201).json(item);
+    }
+    const list  = readLocalJSON(NEWS_FILE) || [];
+    const maxId = list.reduce((m, n) => Math.max(m, n.id), 0);
+    const item  = { id: maxId + 1, ...newsFields(req.body) };
+    list.push(item);
+    writeLocalJSON(NEWS_FILE, list);
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/news/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const patch = {};
+    if (req.body.title !== undefined)       patch.title       = req.body.title;
+    if (req.body.mediaType !== undefined)   patch.mediaType   = req.body.mediaType === 'video' ? 'video' : 'image';
+    if (req.body.media !== undefined)       patch.media       = req.body.media;
+    if (req.body.mediaPoster !== undefined) patch.mediaPoster = req.body.mediaPoster;
+    if (req.body.description !== undefined) patch.description = req.body.description;
+    if (req.body.date !== undefined)        patch.date        = req.body.date;
+    if (USE_FB) {
+      const ref  = _db.collection('news').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Berita tidak ditemukan' });
+      const updated = { ...snap.data(), ...patch, id };
+      await ref.set(updated);
+      return res.json(updated);
+    }
+    const list = readLocalJSON(NEWS_FILE) || [];
+    const idx  = list.findIndex(n => n.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Berita tidak ditemukan' });
+    list[idx] = { ...list[idx], ...patch, id };
+    writeLocalJSON(NEWS_FILE, list);
+    res.json(list[idx]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/news/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (USE_FB) {
+      const ref  = _db.collection('news').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Berita tidak ditemukan' });
+      await ref.delete();
+      // best-effort: remove this post's comments
+      const cs = await _db.collection('comments').where('newsId', '==', id).get();
+      const batch = _db.batch();
+      cs.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      return res.json({ ok: true });
+    }
+    const list = readLocalJSON(NEWS_FILE) || [];
+    if (!list.find(n => n.id === id)) return res.status(404).json({ error: 'Berita tidak ditemukan' });
+    writeLocalJSON(NEWS_FILE, list.filter(n => n.id !== id));
+    const comments = readLocalJSON(COMMENTS_FILE) || [];
+    writeLocalJSON(COMMENTS_FILE, comments.filter(c => c.newsId !== id));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// Comment auth — phone OTP for website visitors who want to comment.
+// Reuses the OTP store with a 'c:' key namespace so it doesn't clash with
+// the document-download OTP flow. On success a 30-day phone-session token is
+// issued; the visitor's display name is asked once and stored in `users`.
+// ============================================================
+app.post('/api/comment-auth/send', async (req, res) => {
+  try {
+    const normalized = normalizePhone(String(req.body.phone || ''));
+    if (normalized.length < 10 || normalized.length > 15) return res.status(400).json({ error: 'Nomor HP tidak valid' });
+
+    const key = 'c:' + normalized;
+    const existing = otpStore.get(key);
+    if (existing && existing.lastSent > Date.now() - 60_000) {
+      const wait = Math.ceil((existing.lastSent + 60_000 - Date.now()) / 1000);
+      return res.status(429).json({ error: `Tunggu ${wait} detik sebelum kirim ulang` });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    otpStore.set(key, { otp, expires: Date.now() + 5 * 60_000, attempts: 0, lastSent: Date.now() });
+    await sendWhatsApp(normalized, `Kode OTP komentar Inti Atap Anda:\n\n*${otp}*\n\nBerlaku 5 menit. Jangan bagikan kode ini ke siapapun.`);
+    res.json({ ok: true, dev: !FONNTE_TOKEN });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/comment-auth/verify', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    const normalized = normalizePhone(String(phone || ''));
+    const key   = 'c:' + normalized;
+    const entry = otpStore.get(key);
+    if (!entry)                           return res.status(400).json({ error: 'OTP tidak ditemukan atau sudah kadaluarsa' });
+    if (entry.expires < Date.now())       { otpStore.delete(key); return res.status(400).json({ error: 'OTP sudah kadaluarsa. Minta kode baru.' }); }
+    if (entry.attempts >= 3)              return res.status(400).json({ error: 'Terlalu banyak percobaan. Minta kode baru.' });
+    if (entry.otp !== String(otp || '').trim()) {
+      entry.attempts++;
+      otpStore.set(key, entry);
+      return res.status(400).json({ error: `Kode salah. ${3 - entry.attempts} percobaan tersisa.` });
+    }
+
+    otpStore.delete(key);
+    const name  = await getUserName(normalized);
+    const token = signUserToken(normalized, name);
+    res.json({ ok: true, token, name, needName: !name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/comment-auth/name', requireUser, async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim().slice(0, 40);
+    if (!name) return res.status(400).json({ error: 'Nama wajib diisi' });
+    await setUserName(req.user.phone, name);
+    res.json({ ok: true, token: signUserToken(req.user.phone, name), name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// News comments
+// ============================================================
+function publicComment(c) {
+  return { id: c.id, name: c.name, text: c.text, createdAt: c.createdAt, updatedAt: c.updatedAt || null };
+}
+async function newsExists(newsId) {
+  if (USE_FB) return (await _db.collection('news').doc(String(newsId)).get()).exists;
+  return (readLocalJSON(NEWS_FILE) || []).some(n => n.id === newsId);
+}
+
+app.get('/api/news/:id/comments', async (req, res) => {
+  try {
+    const newsId = Number(req.params.id);
+    let list;
+    if (USE_FB) {
+      const snap = await _db.collection('comments').where('newsId', '==', newsId).get();
+      list = snap.docs.map(d => d.data());
+    } else {
+      list = (readLocalJSON(COMMENTS_FILE) || []).filter(c => c.newsId === newsId);
+    }
+    list.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    res.json(list.map(publicComment));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// The signed-in visitor's own comment on this post (so the UI can prefill/edit)
+app.get('/api/news/:id/my-comment', requireUser, async (req, res) => {
+  try {
+    const newsId = Number(req.params.id);
+    if (USE_FB) {
+      const snap = await _db.collection('comments').doc(newsId + '_' + req.user.phone).get();
+      return res.json(snap.exists ? publicComment(snap.data()) : {});
+    }
+    const c = (readLocalJSON(COMMENTS_FILE) || []).find(x => x.newsId === newsId && x.phone === req.user.phone);
+    res.json(c ? publicComment(c) : {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Create or update the visitor's single comment for this post
+app.post('/api/news/:id/comments', requireUser, async (req, res) => {
+  try {
+    const newsId = Number(req.params.id);
+    const text   = (req.body.text || '').trim().slice(0, 500);
+    if (!text)          return res.status(400).json({ error: 'Komentar tidak boleh kosong' });
+    if (!req.user.name) return res.status(400).json({ error: 'Nama diperlukan' });
+    if (!(await newsExists(newsId))) return res.status(404).json({ error: 'Berita tidak ditemukan' });
+
+    const now = new Date().toISOString();
+    if (USE_FB) {
+      const ref  = _db.collection('comments').doc(newsId + '_' + req.user.phone);
+      const snap = await ref.get();
+      const item = {
+        id: newsId + '_' + req.user.phone,
+        newsId, phone: req.user.phone, name: req.user.name, text,
+        createdAt: snap.exists ? snap.data().createdAt : now,
+        updatedAt: now,
+      };
+      await ref.set(item);
+      return res.status(201).json(publicComment(item));
+    }
+
+    const list = readLocalJSON(COMMENTS_FILE) || [];
+    const idx  = list.findIndex(c => c.newsId === newsId && c.phone === req.user.phone);
+    let saved;
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], name: req.user.name, text, updatedAt: now };
+      saved = list[idx];
+    } else {
+      const maxId = list.reduce((m, c) => Math.max(m, typeof c.id === 'number' ? c.id : 0), 0);
+      saved = { id: maxId + 1, newsId, phone: req.user.phone, name: req.user.name, text, createdAt: now };
+      list.push(saved);
+    }
+    writeLocalJSON(COMMENTS_FILE, list);
+    res.status(201).json(publicComment(saved));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Seed Firestore and start server
 // ============================================================
-if (USE_FB) seedFirestore().catch(console.error);
+if (USE_FB) {
+  seedFirestore().catch(console.error);
+  ensureBucketCors().catch(console.error);
+}
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`\n  Prabu Inti berjalan di http://localhost:${PORT}`);
+    console.log(`\n  Inti Atap berjalan di http://localhost:${PORT}`);
     console.log(`  Admin panel : http://localhost:${PORT}/admin`);
     console.log(`  Dokumen     : http://localhost:${PORT}/dokumen`);
     console.log(`  Mode        : ${USE_FB ? 'Firebase (Firestore + Storage)' : 'Local files (dev)'}`);
