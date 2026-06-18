@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(pkill -f \"node server.js\")",
-      "Bash(curl -s http://localhost:4099/)"
+      "Bash(curl -s http://localhost:4099/)",
+      "Bash(node -c server.js)",
+      "Bash(node -e \"require\\('vm'\\).compileFunction\\(require\\('fs'\\).readFileSync\\('public/js/main.js','utf8'\\)\\)\")"
     ]
   }
 }

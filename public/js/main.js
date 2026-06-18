@@ -577,12 +577,14 @@ const ProjectDetail = (function () {
 async function renderProjectShowcase(portfolioFallback) {
   const grid = document.getElementById('projectsGrid');
   if (!grid) return;
+  const searchWrap  = document.querySelector('.projects .catalog-search');
+  const searchInput = document.getElementById('projectsSearch');
+  const emptyEl     = document.getElementById('projectsEmpty');
 
   const { projects } = await Catalog.load();
 
   if (projects.length) {
-    grid.innerHTML = '';
-    projects.forEach(pr => {
+    function makeProjectCard(pr) {
       const card = document.createElement('div');
       card.className = 'project-card reveal visible';
       const cover = (pr.images && pr.images[0]) || '';
@@ -601,10 +603,30 @@ async function renderProjectShowcase(portfolioFallback) {
       card.appendChild(label);
       card.style.cursor = 'pointer';
       card.addEventListener('click', () => ProjectDetail.open(pr));
-      grid.appendChild(card);
-    });
+      return card;
+    }
+
+    function renderList(list) {
+      grid.innerHTML = '';
+      list.forEach(pr => grid.appendChild(makeProjectCard(pr)));
+      if (emptyEl) emptyEl.hidden = list.length > 0;
+      LazyImages.refresh();
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.trim().toLowerCase();
+        renderList(!q ? projects : projects.filter(pr =>
+          `${pr.title || ''} ${pr.location || ''} ${pr.year || ''} ${pr.description || ''}`.toLowerCase().includes(q)));
+      });
+    }
+
+    renderList(projects);
     return;
   }
+
+  // No projects yet — hide the search box so it doesn't filter the static collage.
+  if (searchWrap) searchWrap.hidden = true;
 
   // Fallback: static collage from homepage.json (not clickable)
   grid.innerHTML = '';
@@ -642,6 +664,8 @@ async function renderProjectShowcase(portfolioFallback) {
 
   const PAGE = 6;
   let all = [], filtered = [], page = 0;
+  let activeCat = 'Semua', searchTerm = '';
+  const searchInput = document.getElementById('productsSearch');
   const projectsById = Catalog.data.projectsById;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 
@@ -686,10 +710,24 @@ async function renderProjectShowcase(portfolioFallback) {
     btn.addEventListener('click', () => {
       catContainer.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      setFilter(cat === 'Semua' ? all : all.filter(p => p.category === cat));
+      activeCat = cat;
+      applyFilters();
     });
     catContainer.appendChild(btn);
   });
+
+  // Combine the active category with the free-text search box.
+  function applyFilters() {
+    const q = searchTerm.trim().toLowerCase();
+    let list = activeCat === 'Semua' ? all : all.filter(p => p.category === activeCat);
+    if (q) list = list.filter(p =>
+      `${p.name || ''} ${p.category || ''} ${p.description || ''}`.toLowerCase().includes(q));
+    setFilter(list);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => { searchTerm = searchInput.value; applyFilters(); });
+  }
 
   function setFilter(list) {
     filtered = list;
@@ -742,7 +780,7 @@ async function renderProjectShowcase(portfolioFallback) {
 
   moreBtn.addEventListener('click', () => { page += 1; renderPage(); });
 
-  setFilter(all);
+  applyFilters();
 })();
 
 /* === News Detail Overlay + Comments ===
@@ -1101,7 +1139,31 @@ const NewsDetail = (function () {
     return card;
   }
 
-  news.forEach(n => list.appendChild(makeCard(n)));
+  // Newest first (the API already sorts by date desc), revealed 4 at a time.
+  const NEWS_BATCH = 4;
+  let shown = 0;
+
+  const moreBtn = document.createElement('button');
+  moreBtn.type = 'button';
+  moreBtn.className = 'news-rail-more';
+  moreBtn.hidden = true;
+
+  function showMore() {
+    // Insert the next batch before the button so it always stays last.
+    news.slice(shown, shown + NEWS_BATCH).forEach(n => list.insertBefore(makeCard(n), moreBtn));
+    shown = Math.min(shown + NEWS_BATCH, news.length);
+    const remaining = news.length - shown;
+    if (remaining > 0) {
+      moreBtn.hidden = false;
+      moreBtn.textContent = `Muat ${Math.min(NEWS_BATCH, remaining)} berita lagi`;
+    } else {
+      moreBtn.hidden = true;
+    }
+  }
+
+  moreBtn.addEventListener('click', showMore);
+  list.appendChild(moreBtn);
+  showMore();
   countB.textContent = news.length;
 
   let touched = false;

@@ -415,6 +415,53 @@ app.get('/api/status', (_, res) => res.json({
 }));
 
 // ============================================================
+// Bidirectional product <-> project links
+// Products carry projectIds; projects carry productIds. Whenever one side is
+// saved we mirror the change onto the other side, so a link created from either
+// the product form or the project form shows up in both places automatically.
+// ============================================================
+function diffIds(nextIds, prevIds) {
+  const next = [...new Set((nextIds || []).map(Number))];
+  const prev = [...new Set((prevIds || []).map(Number))];
+  return { add: next.filter(id => !prev.includes(id)), remove: prev.filter(id => !next.includes(id)) };
+}
+
+async function mirrorLinks(collection, field, ownerId, nextIds, prevIds, file) {
+  const { add, remove } = diffIds(nextIds, prevIds);
+  if (!add.length && !remove.length) return;
+  const oid = Number(ownerId);
+  if (USE_FB) {
+    const apply = async (otherId, addIt) => {
+      const ref  = _db.collection(collection).doc(String(otherId));
+      const snap = await ref.get();
+      if (!snap.exists) return;
+      const ids = [...new Set((snap.data()[field] || []).map(Number))];
+      const has = ids.includes(oid);
+      if (addIt && !has)        await ref.update({ [field]: [...ids, oid] });
+      else if (!addIt && has)   await ref.update({ [field]: ids.filter(x => x !== oid) });
+    };
+    for (const id of add)    await apply(id, true);
+    for (const id of remove) await apply(id, false);
+    return;
+  }
+  const list = readLocalJSON(file) || [];
+  let changed = false;
+  list.forEach(item => {
+    const ids = [...new Set((item[field] || []).map(Number))];
+    const has = ids.includes(oid);
+    if (add.includes(item.id) && !has)    { item[field] = [...ids, oid]; changed = true; }
+    if (remove.includes(item.id) && has)  { item[field] = ids.filter(x => x !== oid); changed = true; }
+  });
+  if (changed) writeLocalJSON(file, list);
+}
+
+// Mirror a product's projectIds onto the matching projects' productIds (and back).
+const mirrorProductToProjects = (productId, nextIds, prevIds) =>
+  mirrorLinks('projects', 'productIds', productId, nextIds, prevIds, PROJECTS_FILE);
+const mirrorProjectToProducts = (projectId, nextIds, prevIds) =>
+  mirrorLinks('products', 'projectIds', projectId, nextIds, prevIds, PRODUCTS_FILE);
+
+// ============================================================
 // Products
 // ============================================================
 app.get('/api/products', async (_, res) => {
@@ -434,6 +481,7 @@ app.post('/api/products', requireAuth, async (req, res) => {
       const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
       const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '', projectIds: Array.isArray(req.body.projectIds) ? req.body.projectIds : [] };
       await _db.collection('products').doc(String(item.id)).set(item);
+      await mirrorProductToProjects(item.id, item.projectIds, []);
       return res.status(201).json(item);
     }
     const list  = readLocalJSON(PRODUCTS_FILE) || [];
@@ -441,6 +489,7 @@ app.post('/api/products', requireAuth, async (req, res) => {
     const item  = { id: maxId + 1, name: req.body.name || '', category: req.body.category || '', image: req.body.image || '', description: req.body.description || '', projectIds: Array.isArray(req.body.projectIds) ? req.body.projectIds : [] };
     list.push(item);
     writeLocalJSON(PRODUCTS_FILE, list);
+    await mirrorProductToProjects(item.id, item.projectIds, []);
     res.status(201).json(item);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -452,15 +501,19 @@ app.put('/api/products/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('products').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Produk tidak ditemukan' });
-      const updated = { ...snap.data(), ...req.body, id };
+      const prev    = snap.data();
+      const updated = { ...prev, ...req.body, id };
       await ref.set(updated);
+      if (Array.isArray(req.body.projectIds)) await mirrorProductToProjects(id, updated.projectIds || [], prev.projectIds || []);
       return res.json(updated);
     }
     const list = readLocalJSON(PRODUCTS_FILE) || [];
     const idx  = list.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Produk tidak ditemukan' });
+    const prevIds = list[idx].projectIds || [];
     list[idx] = { ...list[idx], ...req.body, id };
     writeLocalJSON(PRODUCTS_FILE, list);
+    if (Array.isArray(req.body.projectIds)) await mirrorProductToProjects(id, list[idx].projectIds || [], prevIds);
     res.json(list[idx]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -472,12 +525,13 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('products').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Produk tidak ditemukan' });
-      const { image } = snap.data();
+      const { image, projectIds } = snap.data();
       if (image && image.includes('storage.googleapis.com')) {
         const parts = image.split('/');
         await fbDeleteFile(parts[parts.length - 2], parts[parts.length - 1]);
       }
       await ref.delete();
+      await mirrorProductToProjects(id, [], projectIds || []);
       return res.json({ ok: true });
     }
     let list = readLocalJSON(PRODUCTS_FILE) || [];
@@ -485,6 +539,7 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
     if (!item) return res.status(404).json({ error: 'Produk tidak ditemukan' });
     if (item.image) { const f = path.join(UPLOADS_DIR, path.basename(item.image)); if (fs.existsSync(f)) fs.unlinkSync(f); }
     writeLocalJSON(PRODUCTS_FILE, list.filter(p => p.id !== id));
+    await mirrorProductToProjects(id, [], item.projectIds || []);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -908,6 +963,7 @@ app.post('/api/projects', requireAuth, async (req, res) => {
       const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
       const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
       await _db.collection('projects').doc(String(item.id)).set(item);
+      await mirrorProjectToProducts(item.id, item.productIds, []);
       return res.status(201).json(item);
     }
     const list  = readLocalJSON(PROJECTS_FILE) || [];
@@ -915,6 +971,7 @@ app.post('/api/projects', requireAuth, async (req, res) => {
     const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
     list.push(item);
     writeLocalJSON(PROJECTS_FILE, list);
+    await mirrorProjectToProducts(item.id, item.productIds, []);
     res.status(201).json(item);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -933,15 +990,19 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('projects').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-      const updated = { ...snap.data(), ...patch, id };
+      const prev    = snap.data();
+      const updated = { ...prev, ...patch, id };
       await ref.set(updated);
+      if (patch.productIds) await mirrorProjectToProducts(id, updated.productIds || [], prev.productIds || []);
       return res.json(updated);
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
     const idx  = list.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const prevIds = list[idx].productIds || [];
     list[idx] = { ...list[idx], ...patch, id };
     writeLocalJSON(PROJECTS_FILE, list);
+    if (patch.productIds) await mirrorProjectToProducts(id, list[idx].productIds || [], prevIds);
     res.json(list[idx]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -953,12 +1014,16 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('projects').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+      const { productIds } = snap.data();
       await ref.delete();
+      await mirrorProjectToProducts(id, [], productIds || []);
       return res.json({ ok: true });
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
-    if (!list.find(p => p.id === id)) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const item = list.find(p => p.id === id);
+    if (!item) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     writeLocalJSON(PROJECTS_FILE, list.filter(p => p.id !== id));
+    await mirrorProjectToProducts(id, [], item.productIds || []);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1189,6 +1254,27 @@ app.post('/api/news/:id/comments', requireUser, async (req, res) => {
     }
     writeLocalJSON(COMMENTS_FILE, list);
     res.status(201).json(publicComment(saved));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: delete a single comment from a news post (back office moderation)
+app.delete('/api/news/:newsId/comments/:commentId', requireAuth, async (req, res) => {
+  try {
+    const newsId    = Number(req.params.newsId);
+    const commentId = String(req.params.commentId);
+    if (USE_FB) {
+      const ref  = _db.collection('comments').doc(commentId);
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Komentar tidak ditemukan' });
+      await ref.delete();
+      return res.json({ ok: true });
+    }
+    const list   = readLocalJSON(COMMENTS_FILE) || [];
+    const before = list.length;
+    const next   = list.filter(c => !(String(c.id) === commentId && c.newsId === newsId));
+    if (next.length === before) return res.status(404).json({ error: 'Komentar tidak ditemukan' });
+    writeLocalJSON(COMMENTS_FILE, next);
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

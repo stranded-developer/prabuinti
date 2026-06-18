@@ -920,6 +920,44 @@ body::before {
   padding: 4px 12px;
   border-radius: 100px;
 }
+.catalog-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.catalog-search svg {
+  position: absolute;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+.catalog-search input {
+  width: 100%;
+  max-width: 380px;
+  padding: 10px 16px 10px 40px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  outline: none;
+  transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out);
+}
+.catalog-search input::placeholder { color: var(--text-3); }
+.catalog-search input:focus { border-color: var(--accent); background: var(--bg-card-2); }
+.projects .catalog-search { margin-top: 28px; justify-content: center; }
+.projects .catalog-search input { max-width: 420px; }
+.projects-empty {
+  text-align: center;
+  color: var(--text-3);
+  font-size: 14px;
+  padding: 32px 0;
+}
+
 .categories {
   display: flex;
   gap: 6px;
@@ -1384,6 +1422,7 @@ body::before {
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   overflow: hidden;
+  background-color: wheat;
 }
 .partners-label {
   text-align: center;
@@ -1421,26 +1460,19 @@ body::before {
   flex-wrap: wrap;
 }
 .partner-item {
-  opacity: 0.45;
-  transition: opacity 200ms var(--ease-out);
+  opacity: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-@media (hover: hover) and (pointer: fine) {
-  .partner-item:hover { opacity: 1; }
 }
 .partner-item img {
   height: 34px;
   width: auto;
   max-width: 100px;
   object-fit: contain;
-  filter: grayscale(1) brightness(1.5);
-  transition: filter 200ms var(--ease-out);
-}
-@media (hover: hover) and (pointer: fine) {
-  .partner-item:hover img { filter: grayscale(0); }
+  /* Full color at all times — no grayscale/dim. */
+  filter: none;
 }
 .partner-item--text {
   font-size: 14px;
@@ -2174,6 +2206,22 @@ body.preloading { overflow: hidden; }
   flex-direction: column;
   gap: 10px;
 }
+
+.news-rail-more {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+.news-rail-more:hover { border-color: var(--accent); color: var(--text); background: var(--bg-card-2); }
 
 /* Compact, clickable news cards inside the rail */
 .news-card {

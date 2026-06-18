@@ -227,6 +227,10 @@
         </div>
         <div class="products-count" id="productsCount"></div>
       </div>
+      <div class="catalog-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="search" id="productsSearch" placeholder="Cari material..." autocomplete="off">
+      </div>
       <div id="categories" class="categories"></div>
       <div id="productsGrid" class="products-grid"></div>
     </div>
@@ -238,7 +242,12 @@
       <div class="section-label reveal">Portofolio</div>
       <h2 class="section-title reveal">Proyek yang<br>Telah Kami Kerjakan</h2>
       <p class="section-desc reveal">Kepercayaan klien kami tercermin dari berbagai proyek konstruksi di seluruh Indonesia.</p>
+      <div class="catalog-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="search" id="projectsSearch" placeholder="Cari proyek..." autocomplete="off">
+      </div>
       <div class="projects-grid" id="projectsGrid"></div>
+      <div class="projects-empty" id="projectsEmpty" hidden>Tidak ada proyek yang cocok dengan pencarian.</div>
     </div>
   </section>
 
@@ -349,21 +358,16 @@
       <div class="partners-label">Mitra &amp; Merek Kami</div>
       <div class="partners-track-wrap">
         <div class="partners-track" id="partnersTrack">
-          <div class="partner-item"><img src="/images/partners/kokoh.png" alt="KOKOH"></div>
-          <div class="partner-item"><img src="/images/partners/alderon.jpeg" alt="ALDERON"></div>
-          <div class="partner-item partner-item--text">FIBERLED</div>
-          <div class="partner-item"><img src="/images/partners/galvalex.jpeg" alt="GALVALEX"></div>
-          <div class="partner-item"><img src="/images/partners/zinium.png" alt="ZINIUM"></div>
-          <div class="partner-item"><img src="/images/partners/saranalume.png" alt="SARANALUME"></div>
-          <div class="partner-item partner-item--text">TERA FOIL</div>
-          <!-- duplicate for seamless loop -->
-          <div class="partner-item"><img src="/images/partners/kokoh.png" alt="KOKOH"></div>
-          <div class="partner-item"><img src="/images/partners/alderon.jpeg" alt="ALDERON"></div>
-          <div class="partner-item partner-item--text">FIBERLED</div>
-          <div class="partner-item"><img src="/images/partners/galvalex.jpeg" alt="GALVALEX"></div>
-          <div class="partner-item"><img src="/images/partners/zinium.png" alt="ZINIUM"></div>
-          <div class="partner-item"><img src="/images/partners/saranalume.png" alt="SARANALUME"></div>
-          <div class="partner-item partner-item--text">TERA FOIL</div>
+          <div class="partner-item"><img data-lazy-src="/images/partners/kokoh.png" alt="KOKOH"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/fiberled.png" alt="FIBERLED"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/tera.png" alt="TERA"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/ioloc.png" alt="IOLOC"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/keoroof.png" alt="KEOROOF"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/kokoh.png" alt="KOKOH"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/fiberled.png" alt="FIBERLED"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/tera.png" alt="TERA"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/ioloc.png" alt="IOLOC"></div>
+        <div class="partner-item"><img data-lazy-src="/images/partners/keoroof.png" alt="KEOROOF"></div>
         </div>
       </div>
     </div>

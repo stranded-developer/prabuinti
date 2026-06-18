@@ -684,6 +684,103 @@
     .proj-card-actions { display: flex; gap: 10px; margin-top: 16px; }
     .proj-uploading { opacity: 0.55; pointer-events: none; }
 
+    /* Collapsible card header — keeps the list compact so many items fit per screen */
+    .proj-card { padding: 0; overflow: hidden; }
+    .proj-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .proj-card-header:hover { background: var(--bg); }
+    .pch-thumb {
+      width: 48px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-3);
+    }
+    .pch-info { flex: 1; min-width: 0; }
+    .pch-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pch-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .pch-chevron {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+      color: var(--text-3);
+      transition: transform 180ms var(--ease);
+    }
+    .proj-card:not(.collapsed) .pch-chevron { transform: rotate(180deg); }
+    .proj-card-body { padding: 0 16px 16px; }
+    .proj-card.collapsed .proj-card-body { display: none; }
+
+    /* Search boxes (lists + pickers) */
+    .admin-search {
+      width: 100%;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 140ms var(--ease);
+    }
+    .admin-search::placeholder { color: var(--text-3); }
+    .admin-search:focus { border-color: var(--accent); }
+    .admin-search--sm { padding: 8px 12px; font-size: 13px; margin-bottom: 10px; }
+
+    /* News comments moderation */
+    .news-comments { margin-top: 18px; border-top: 1.5px solid var(--border); padding-top: 14px; }
+    .news-comments-title { font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 10px; }
+    .news-comments-list { display: flex; flex-direction: column; gap: 8px; }
+    .news-comments-empty { font-size: 13px; color: var(--text-3); padding: 6px 0; }
+    .news-comment {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .news-comment-main { flex: 1; min-width: 0; }
+    .news-comment-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .news-comment-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .news-comment-time { font-size: 11px; color: var(--text-3); }
+    .news-comment-text { font-size: 13px; color: var(--text-2); margin-top: 3px; word-break: break-word; }
+    .news-comment-del {
+      flex-shrink: 0;
+      font-size: 14px;
+      line-height: 1;
+      padding: 6px 8px;
+      border-radius: 7px;
+      background: transparent;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 140ms var(--ease), background 140ms var(--ease);
+    }
+    .news-comment-del:hover { border-color: var(--red, #c0392b); background: rgba(192,57,43,0.1); }
+    .news-comment-del:disabled { opacity: 0.5; pointer-events: none; }
+
     /* === Project picker (in product modal) === */
     .proj-picker {
       display: flex;
@@ -818,6 +915,7 @@
           </div>
         </div>
 
+        <input type="search" id="productSearch" class="admin-search" placeholder="🔍 Cari produk (nama, kategori, deskripsi)...">
         <div class="product-grid" id="productGrid"></div>
       </div>
 
@@ -832,6 +930,7 @@
             + Tambah Proyek Baru
           </button>
         </div>
+        <input type="search" id="projectSearch" class="admin-search" placeholder="🔍 Cari proyek (nama, lokasi, tahun)...">
         <div id="projectsList"></div>
       </div>
 
@@ -846,6 +945,7 @@
             + Tambah Berita Baru
           </button>
         </div>
+        <input type="search" id="newsSearch" class="admin-search" placeholder="🔍 Cari berita (judul, isi)...">
         <div id="newsList"></div>
       </div>
 
@@ -929,7 +1029,8 @@
 
       <div class="form-group">
         <label class="form-label">Proyek Terkait</label>
-        <p style="font-size:12px;color:var(--text-3);margin:-2px 0 10px;">Pilih proyek yang menggunakan produk ini. Tampil di halaman detail produk.</p>
+        <p style="font-size:12px;color:var(--text-3);margin:-2px 0 10px;">Pilih proyek yang menggunakan produk ini. Tautan otomatis muncul juga di proyek tersebut.</p>
+        <input type="search" id="pProjectSearch" class="admin-search admin-search--sm" placeholder="🔍 Cari proyek...">
         <div id="pProjectsPicker" class="proj-picker"></div>
       </div>
 
@@ -1021,11 +1122,26 @@
         const products = await r.json();
         adminProducts = products;
         document.getElementById('adminSubtitle').textContent = products.length + ' produk terdaftar';
-        renderGrid(products);
+        filterAndRenderProducts();
       } catch {
         grid.innerHTML = '<p style="color:var(--red);">Gagal memuat produk.</p>';
       }
     }
+
+    // Live search over the admin product grid.
+    function filterAndRenderProducts() {
+      const q = (document.getElementById('productSearch')?.value || '').trim().toLowerCase();
+      if (!q) return renderGrid(adminProducts);
+      const list = adminProducts.filter(p =>
+        `${p.name || ''} ${p.category || ''} ${p.description || ''}`.toLowerCase().includes(q));
+      if (!list.length) {
+        document.getElementById('productGrid').innerHTML =
+          '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada produk yang cocok.</div>';
+        return;
+      }
+      renderGrid(list);
+    }
+    document.getElementById('productSearch').addEventListener('input', filterAndRenderProducts);
 
     // === Categories (managed dynamically; products pick from this list) ===
     let categoriesState = [];
@@ -1233,6 +1349,7 @@
       document.getElementById('pDesc').value = '';
       document.getElementById('modalDelete').style.display = 'none';
       resetImgArea();
+      document.getElementById('pProjectSearch').value = '';
       renderProjectPicker([]);
       openModal();
       document.getElementById('pName').focus();
@@ -1252,6 +1369,7 @@
       document.getElementById('modalDelete').style.display = 'inline-flex';
       resetImgArea();
       if (p.image) setImgPreview(p.image);
+      document.getElementById('pProjectSearch').value = '';
       renderProjectPicker(p.projectIds || []);
       openModal();
       await ensureProjectsLoaded();
@@ -1392,6 +1510,14 @@
       } catch { adminProducts = []; }
     }
 
+    // Expand a collapsed admin card (after creating a new item) and scroll to it.
+    function expandCard(listId, id) {
+      const el = document.querySelector('#' + listId + ' .proj-card[data-id="' + id + '"]');
+      if (!el) return;
+      el.classList.remove('collapsed');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     async function loadProjectsAdmin() {
       const list = document.getElementById('projectsList');
       list.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat proyek...</p>';
@@ -1416,8 +1542,16 @@
           </div>`;
         return;
       }
-      adminProjects.forEach(proj => list.appendChild(makeProjectCard(proj)));
+      const q = (document.getElementById('projectSearch')?.value || '').trim().toLowerCase();
+      const shown = !q ? adminProjects : adminProjects.filter(p =>
+        `${p.title || ''} ${p.location || ''} ${p.year || ''} ${p.description || ''}`.toLowerCase().includes(q));
+      if (!shown.length) {
+        list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada proyek yang cocok.</p>';
+        return;
+      }
+      shown.forEach(proj => list.appendChild(makeProjectCard(proj)));
     }
+    document.getElementById('projectSearch').addEventListener('input', renderProjectsAdmin);
 
     function makeProjectCard(proj) {
       const state = {
@@ -1432,6 +1566,7 @@
 
       const card = document.createElement('div');
       card.className = 'proj-card';
+      card.dataset.id = proj.id;
 
       const top = document.createElement('div');
       top.className = 'proj-card-top';
@@ -1511,6 +1646,11 @@
       prodLabel.style.cssText = 'display:block;margin-top:16px;margin-bottom:6px;';
       prodLabel.textContent = 'Produk yang Digunakan';
 
+      const prodSearch = document.createElement('input');
+      prodSearch.type = 'search';
+      prodSearch.className = 'admin-search admin-search--sm';
+      prodSearch.placeholder = '🔍 Cari produk...';
+
       const prodPicker = document.createElement('div');
       prodPicker.className = 'proj-picker';
       function renderProdPicker() {
@@ -1520,7 +1660,14 @@
           return;
         }
         const sel = new Set(state.productIds.map(Number));
-        adminProducts.forEach(prod => {
+        const q = prodSearch.value.trim().toLowerCase();
+        const list = !q ? adminProducts : adminProducts.filter(prod =>
+          `${prod.name || ''} ${prod.category || ''}`.toLowerCase().includes(q));
+        if (!list.length) {
+          prodPicker.innerHTML = '<div class="proj-picker-empty">Tidak ada produk yang cocok.</div>';
+          return;
+        }
+        list.forEach(prod => {
           const lbl = document.createElement('label');
           lbl.className = 'proj-pick';
           const cb = document.createElement('input');
@@ -1543,6 +1690,7 @@
         });
       }
       renderProdPicker();
+      prodSearch.addEventListener('input', renderProdPicker);
 
       const actions = document.createElement('div');
       actions.className = 'proj-card-actions';
@@ -1564,13 +1712,53 @@
       actions.appendChild(saveBtn);
       actions.appendChild(delBtn);
 
-      card.appendChild(top);
-      card.appendChild(fileInput);
-      card.appendChild(imgsWrap);
-      card.appendChild(prodLabel);
-      card.appendChild(prodPicker);
-      card.appendChild(actions);
+      // Collapsible header (compact summary) + body (the edit form)
+      const header = document.createElement('div');
+      header.className = 'proj-card-header';
+      const hThumb = document.createElement('div');
+      hThumb.className = 'pch-thumb';
+      const hInfo = document.createElement('div');
+      hInfo.className = 'pch-info';
+      hInfo.innerHTML = '<div class="pch-title"></div><div class="pch-meta"></div>';
+      header.innerHTML = '';
+      header.appendChild(hThumb);
+      header.appendChild(hInfo);
+      header.insertAdjacentHTML('beforeend',
+        '<svg class="pch-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+      const hTitle = hInfo.querySelector('.pch-title');
+      const hMeta  = hInfo.querySelector('.pch-meta');
+      function updateHeader() {
+        const cover = state.images[0];
+        if (cover) { hThumb.innerHTML = ''; hThumb.style.backgroundImage = `url("${cover}")`; hThumb.style.backgroundSize = 'cover'; hThumb.style.backgroundPosition = 'center'; }
+        else { hThumb.style.backgroundImage = ''; hThumb.textContent = 'PI'; }
+        hTitle.textContent = state.title || 'Tanpa judul';
+        const bits = [state.images.length + ' foto'];
+        if (state.year) bits.push(state.year);
+        if (state.location) bits.push(state.location);
+        hMeta.textContent = bits.join(' · ');
+      }
+      titleInput.addEventListener('input', updateHeader);
+      yearInput.addEventListener('input', updateHeader);
+      locInput.addEventListener('input', updateHeader);
+      const _renderImgs = renderImgs;
+      renderImgs = function () { _renderImgs(); updateHeader(); };
+      header.addEventListener('click', () => card.classList.toggle('collapsed'));
+
+      const body = document.createElement('div');
+      body.className = 'proj-card-body';
+      body.appendChild(top);
+      body.appendChild(fileInput);
+      body.appendChild(imgsWrap);
+      body.appendChild(prodLabel);
+      body.appendChild(prodSearch);
+      body.appendChild(prodPicker);
+      body.appendChild(actions);
+
+      card.classList.add('collapsed');
+      card.appendChild(header);
+      card.appendChild(body);
       renderImgs();
+      updateHeader();
       return card;
     }
 
@@ -1618,28 +1806,44 @@
           const proj = await r.json();
           adminProjects.push(proj);
           renderProjectsAdmin();
+          expandCard('projectsList', proj.id);
           showToast('Proyek baru dibuat ✓', 'success');
         } else showToast('Gagal membuat proyek', 'error');
       } catch { showToast('Tidak dapat terhubung', 'error'); }
     });
 
     // Project picker inside the product modal
+    // Selection lives in a Set so it survives search-filtering (filtered-out
+    // checkboxes leave the DOM but stay selected). Pass an array to (re)seed it;
+    // call with no argument to just re-render (e.g. on search input).
+    let modalProjectSel = new Set();
     function renderProjectPicker(selectedIds) {
+      if (selectedIds) modalProjectSel = new Set(selectedIds.map(Number));
       const wrap = document.getElementById('pProjectsPicker');
       wrap.innerHTML = '';
       if (!adminProjects.length) {
         wrap.innerHTML = '<div class="proj-picker-empty">Belum ada proyek. Tambahkan dulu di tab Proyek.</div>';
         return;
       }
-      const sel = new Set((selectedIds || []).map(Number));
-      adminProjects.forEach(proj => {
+      const q = (document.getElementById('pProjectSearch')?.value || '').trim().toLowerCase();
+      const list = !q ? adminProjects : adminProjects.filter(pr =>
+        `${pr.title || ''} ${pr.location || ''} ${pr.year || ''}`.toLowerCase().includes(q));
+      if (!list.length) {
+        wrap.innerHTML = '<div class="proj-picker-empty">Tidak ada proyek yang cocok.</div>';
+        return;
+      }
+      list.forEach(proj => {
         const label = document.createElement('label');
         label.className = 'proj-pick';
 
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.value = proj.id;
-        cb.checked = sel.has(Number(proj.id));
+        cb.checked = modalProjectSel.has(Number(proj.id));
+        cb.addEventListener('change', () => {
+          if (cb.checked) modalProjectSel.add(Number(proj.id));
+          else modalProjectSel.delete(Number(proj.id));
+        });
 
         const thumb = document.createElement(proj.images && proj.images[0] ? 'img' : 'div');
         thumb.className = 'proj-pick-thumb';
@@ -1654,9 +1858,10 @@
         wrap.appendChild(label);
       });
     }
+    document.getElementById('pProjectSearch').addEventListener('input', () => renderProjectPicker());
 
     function selectedProjectIds() {
-      return [...document.querySelectorAll('#pProjectsPicker input:checked')].map(cb => Number(cb.value));
+      return [...modalProjectSel];
     }
 
     // === News (Berita) ===
@@ -1685,8 +1890,16 @@
           </div>`;
         return;
       }
-      adminNews.forEach(n => list.appendChild(makeNewsCard(n)));
+      const q = (document.getElementById('newsSearch')?.value || '').trim().toLowerCase();
+      const shown = !q ? adminNews : adminNews.filter(n =>
+        `${n.title || ''} ${n.description || ''}`.toLowerCase().includes(q));
+      if (!shown.length) {
+        list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada berita yang cocok.</p>';
+        return;
+      }
+      shown.forEach(n => list.appendChild(makeNewsCard(n)));
     }
+    document.getElementById('newsSearch').addEventListener('input', renderNewsAdmin);
 
     function makeNewsCard(news) {
       const state = {
@@ -1701,6 +1914,7 @@
 
       const card = document.createElement('div');
       card.className = 'proj-card';
+      card.dataset.id = news.id;
 
       const top = document.createElement('div');
       top.className = 'proj-card-top';
@@ -1822,13 +2036,122 @@
       actions.appendChild(saveBtn);
       actions.appendChild(delBtn);
 
-      card.appendChild(top);
-      card.appendChild(mediaLabel);
-      card.appendChild(preview);
-      card.appendChild(mediaBtns);
-      card.appendChild(photoInput);
-      card.appendChild(videoInput);
-      card.appendChild(actions);
+      // --- Comments moderation (loaded lazily on first expand) ---
+      const commentsWrap = document.createElement('div');
+      commentsWrap.className = 'news-comments';
+      const commentsTitle = document.createElement('div');
+      commentsTitle.className = 'news-comments-title';
+      commentsTitle.textContent = 'Komentar';
+      const commentsList = document.createElement('div');
+      commentsList.className = 'news-comments-list';
+      commentsWrap.appendChild(commentsTitle);
+      commentsWrap.appendChild(commentsList);
+      let commentsLoaded = false;
+
+      function fmtCommentTime(s) {
+        const d = new Date(s);
+        if (isNaN(d)) return '';
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      async function loadComments() {
+        commentsList.innerHTML = '<div class="news-comments-empty">Memuat komentar...</div>';
+        let list = [];
+        try {
+          const r = await fetch('/api/news/' + state.id + '/comments');
+          list = r.ok ? await r.json() : [];
+        } catch { list = []; }
+        commentsTitle.textContent = 'Komentar (' + list.length + ')';
+        if (!list.length) {
+          commentsList.innerHTML = '<div class="news-comments-empty">Belum ada komentar.</div>';
+          return;
+        }
+        commentsList.innerHTML = '';
+        list.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'news-comment';
+          const main = document.createElement('div');
+          main.className = 'news-comment-main';
+          const head = document.createElement('div');
+          head.className = 'news-comment-head';
+          head.innerHTML = '<span class="news-comment-name"></span><span class="news-comment-time"></span>';
+          head.querySelector('.news-comment-name').textContent = c.name || 'Anonim';
+          head.querySelector('.news-comment-time').textContent = fmtCommentTime(c.updatedAt || c.createdAt);
+          const txt = document.createElement('div');
+          txt.className = 'news-comment-text';
+          txt.textContent = c.text || '';
+          main.appendChild(head);
+          main.appendChild(txt);
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'news-comment-del';
+          del.textContent = '🗑️';
+          del.title = 'Hapus komentar';
+          del.addEventListener('click', async () => {
+            if (!confirm('Hapus komentar dari ' + (c.name || 'Anonim') + '?')) return;
+            del.disabled = true;
+            try {
+              const r = await fetch('/api/news/' + state.id + '/comments/' + encodeURIComponent(c.id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+              if (r.ok) { row.remove(); showToast('Komentar dihapus', 'success'); loadComments(); }
+              else { showToast('Gagal menghapus komentar', 'error'); del.disabled = false; }
+            } catch { showToast('Tidak dapat terhubung', 'error'); del.disabled = false; }
+          });
+          row.appendChild(main);
+          row.appendChild(del);
+          commentsList.appendChild(row);
+        });
+      }
+
+      // Collapsible header (compact summary) + body (the edit form)
+      const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const header = document.createElement('div');
+      header.className = 'proj-card-header';
+      const hThumb = document.createElement('div');
+      hThumb.className = 'pch-thumb';
+      const hInfo = document.createElement('div');
+      hInfo.className = 'pch-info';
+      hInfo.innerHTML = '<div class="pch-title"></div><div class="pch-meta"></div>';
+      header.appendChild(hThumb);
+      header.appendChild(hInfo);
+      header.insertAdjacentHTML('beforeend',
+        '<svg class="pch-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+      const hTitle = hInfo.querySelector('.pch-title');
+      const hMeta  = hInfo.querySelector('.pch-meta');
+      function fmtDate(d) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+        return m ? (Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1]) : (d || '');
+      }
+      function updateHeader() {
+        const cover = state.mediaType === 'video' ? state.mediaPoster : state.media;
+        if (cover) { hThumb.innerHTML = ''; hThumb.style.backgroundImage = `url("${cover}")`; hThumb.style.backgroundSize = 'cover'; hThumb.style.backgroundPosition = 'center'; }
+        else { hThumb.style.backgroundImage = ''; hThumb.textContent = state.mediaType === 'video' ? '🎬' : 'PI'; }
+        hTitle.textContent = state.title || 'Tanpa judul';
+        hMeta.textContent = fmtDate(state.date);
+      }
+      titleInput.addEventListener('input', updateHeader);
+      dateInput.addEventListener('input', updateHeader);
+      const _renderPreview = renderPreview;
+      renderPreview = function () { _renderPreview(); updateHeader(); };
+      header.addEventListener('click', () => {
+        card.classList.toggle('collapsed');
+        if (!card.classList.contains('collapsed') && !commentsLoaded) { commentsLoaded = true; loadComments(); }
+      });
+
+      const body = document.createElement('div');
+      body.className = 'proj-card-body';
+      body.appendChild(top);
+      body.appendChild(mediaLabel);
+      body.appendChild(preview);
+      body.appendChild(mediaBtns);
+      body.appendChild(photoInput);
+      body.appendChild(videoInput);
+      body.appendChild(commentsWrap);
+      body.appendChild(actions);
+
+      card.classList.add('collapsed');
+      card.appendChild(header);
+      card.appendChild(body);
+      updateHeader();
       return card;
     }
 
@@ -1874,6 +2197,7 @@
           const news = await r.json();
           adminNews.unshift(news);
           renderNewsAdmin();
+          expandCard('newsList', news.id);
           showToast('Berita baru dibuat ✓', 'success');
         } else showToast('Gagal membuat berita', 'error');
       } catch { showToast('Tidak dapat terhubung', 'error'); }
