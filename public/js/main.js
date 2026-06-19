@@ -1070,12 +1070,19 @@ const NewsDetail = (function () {
   const countB  = document.getElementById('newsRailCount');
   if (!rail || !list || !toggle) return;
 
-  let news = [];
-  try {
-    const r = await fetch('/api/news');
-    news = r.ok ? await r.json() : [];
-  } catch { news = []; }
-  if (!news.length) return; // nothing to show — rail stays hidden
+  const NEWS_BATCH = 4;
+
+  // Fetch one page at a time from the server (true server-side pagination).
+  async function fetchPage(page) {
+    try {
+      const r = await fetch(`/api/news?page=${page}&limit=${NEWS_BATCH}`);
+      if (!r.ok) return { items: [], total: 0, hasMore: false };
+      return await r.json();
+    } catch { return { items: [], total: 0, hasMore: false }; }
+  }
+
+  const first = await fetchPage(1);
+  if (!first.items.length) return; // nothing to show — rail stays hidden
 
   const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   function fmtDate(d) {
@@ -1139,32 +1146,53 @@ const NewsDetail = (function () {
     return card;
   }
 
-  // Newest first (the API already sorts by date desc), revealed 4 at a time.
-  const NEWS_BATCH = 4;
-  let shown = 0;
+  // Newest first (the API sorts by date desc), fetched one page at a time.
+  const total = first.total || first.items.length;
+  let nextPage = 1;          // page just rendered
+  let shown    = 0;
+  let hasMore  = !!first.hasMore;
+  let loading  = false;
 
   const moreBtn = document.createElement('button');
   moreBtn.type = 'button';
   moreBtn.className = 'news-rail-more';
   moreBtn.hidden = true;
 
-  function showMore() {
-    // Insert the next batch before the button so it always stays last.
-    news.slice(shown, shown + NEWS_BATCH).forEach(n => list.insertBefore(makeCard(n), moreBtn));
-    shown = Math.min(shown + NEWS_BATCH, news.length);
-    const remaining = news.length - shown;
-    if (remaining > 0) {
+  function renderBatch(items) {
+    // Insert the batch before the button so it always stays last.
+    items.forEach(n => list.insertBefore(makeCard(n), moreBtn));
+    shown += items.length;
+  }
+
+  function updateMoreBtn() {
+    const remaining = total - shown;
+    if (hasMore && remaining > 0) {
       moreBtn.hidden = false;
+      moreBtn.disabled = false;
       moreBtn.textContent = `Muat ${Math.min(NEWS_BATCH, remaining)} berita lagi`;
     } else {
       moreBtn.hidden = true;
     }
   }
 
+  async function showMore() {
+    if (loading || !hasMore) return;
+    loading = true;
+    moreBtn.disabled = true;
+    moreBtn.textContent = 'Memuat…';
+    const data = await fetchPage(nextPage + 1);
+    nextPage += 1;
+    hasMore = !!data.hasMore;
+    renderBatch(data.items || []);
+    updateMoreBtn();
+    loading = false;
+  }
+
   moreBtn.addEventListener('click', showMore);
   list.appendChild(moreBtn);
-  showMore();
-  countB.textContent = news.length;
+  renderBatch(first.items);   // page 1, already fetched
+  updateMoreBtn();
+  countB.textContent = total;
 
   let touched = false;
   const openRail  = () => { rail.classList.add('open');  toggle.setAttribute('aria-expanded', 'true'); };

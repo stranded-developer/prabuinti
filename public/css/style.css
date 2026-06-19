@@ -2345,18 +2345,18 @@ body.preloading { overflow: hidden; }
 .pd-scroll { max-height: 90vh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* Hero */
-.pd-hero { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 420px; }
-.pd-hero-media { position: relative; overflow: hidden; background: var(--bg-2); min-height: 340px; }
+.pd-hero { display: grid; grid-template-columns: 1.05fr 1fr; align-items: stretch; }
+/* Match the grid thumbnail's 4/3 framing so the detail image isn't extra-cropped.
+   align-self:start lets the media keep its 4/3 height instead of being stretched
+   to the (sometimes taller) text column beside it. */
+.pd-hero-media { position: relative; overflow: hidden; background: var(--bg-2); aspect-ratio: 4 / 3; align-self: start; }
 .pd-hero-media img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.08);
-  transition: transform 1400ms var(--ease-out);
 }
-.pd.open .pd-hero-media img { transform: scale(1); }
 .pd-hero-media::after {
   content: '';
   position: absolute;
@@ -2563,7 +2563,6 @@ textarea.nd-field { resize: vertical; min-height: 84px; line-height: 1.5; }
   .pd-dialog { max-width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; border: none; }
   .pd-scroll { max-height: 100vh; }
   .pd-hero { grid-template-columns: 1fr; }
-  .pd-hero-media { min-height: 280px; }
   .pd-hero-info { padding: 36px 28px; }
   .pd-projects { padding: 36px 28px 44px; }
 }

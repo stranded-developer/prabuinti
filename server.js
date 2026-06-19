@@ -1042,15 +1042,33 @@ function newsFields(body) {
   };
 }
 
-app.get('/api/news', async (_, res) => {
+app.get('/api/news', async (req, res) => {
   try {
+    // Pagination is opt-in: pass ?page=1&limit=4 to get a paginated envelope
+    // ({ items, total, page, limit, hasMore }). Without these params the
+    // endpoint returns the full array as before (used by the admin list).
+    const paginate = req.query.page != null || req.query.limit != null;
+    const limit    = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 4));
+    const page     = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const offset   = (page - 1) * limit;
+
     if (USE_FB) {
-      const snap = await _db.collection('news').orderBy('date', 'desc').get();
-      return res.json(snap.docs.map(d => d.data()));
+      const col = _db.collection('news').orderBy('date', 'desc');
+      if (!paginate) {
+        const snap = await col.get();
+        return res.json(snap.docs.map(d => d.data()));
+      }
+      const total = (await _db.collection('news').count().get()).data().count;
+      const snap  = await col.offset(offset).limit(limit).get();
+      const items = snap.docs.map(d => d.data());
+      return res.json({ items, total, page, limit, hasMore: offset + items.length < total });
     }
+
     const list = readLocalJSON(NEWS_FILE) || [];
     list.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-    res.json(list);
+    if (!paginate) return res.json(list);
+    const items = list.slice(offset, offset + limit);
+    res.json({ items, total: list.length, page, limit, hasMore: offset + items.length < list.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
