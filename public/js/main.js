@@ -294,7 +294,7 @@ const ProductDetail = (function () {
   const projWrap = document.getElementById('pdProjects');
   const projList = document.getElementById('pdProjectsList');
   const scroll   = document.getElementById('pdScroll');
-  const WA       = 'https://wa.me/6285833339997';
+  const WA       = 'https://wa.me/6285199881929';
 
   let isOpen = false;
 
@@ -505,13 +505,17 @@ const ProjectDetail = (function () {
  * Hero: a single looping MP4 background video (managed via admin).
  */
 (async function initHomepage() {
-  let hp = { heroVideo: '', alderonImage: '', portfolio: [] };
+  let hp = { heroVideo: '', alderonImage: '', alderonTitle: '', alderonSub: '', alderonDesc: '', alderonFeatures: null, portfolio: [] };
   try {
     const r = await fetch('/api/homepage');
     if (r.ok) {
       const data = await r.json();
       if (data.heroVideo) hp.heroVideo = data.heroVideo;
       if (data.alderonImage) hp.alderonImage = data.alderonImage;
+      if (data.alderonTitle) hp.alderonTitle = data.alderonTitle;
+      if (data.alderonSub) hp.alderonSub = data.alderonSub;
+      if (data.alderonDesc) hp.alderonDesc = data.alderonDesc;
+      if (Array.isArray(data.alderonFeatures)) hp.alderonFeatures = data.alderonFeatures;
       if (Array.isArray(data.portfolio)) hp.portfolio = data.portfolio;
     }
   } catch {}
@@ -558,12 +562,37 @@ const ProjectDetail = (function () {
   // and fills in as it buffers, so we reveal as soon as eager images are loaded.
   whenWindowLoaded().then(Preloader.reveal);
 
-  // --- Alderon featured image ---
+  // --- Alderon featured image + copy ---
+  // The title/description default to the static HTML; only overwrite them when
+  // the admin has set a custom value, so the page never renders blank.
   {
     const img = document.getElementById('alderonFeaturedImg');
     if (img) {
       if (hp.alderonImage) img.setAttribute('data-lazy-src', hp.alderonImage);
       LazyImages.observe(img);
+    }
+    const titleEl = document.getElementById('alderonBrandText');
+    if (titleEl && hp.alderonTitle) titleEl.textContent = hp.alderonTitle;
+    const subEl = document.getElementById('alderonSub');
+    if (subEl && hp.alderonSub) subEl.textContent = hp.alderonSub;
+    const descEl = document.getElementById('alderonDesc');
+    if (descEl && hp.alderonDesc) descEl.textContent = hp.alderonDesc;
+
+    const listEl = document.getElementById('alderonFeaturesList');
+    if (listEl && Array.isArray(hp.alderonFeatures) && hp.alderonFeatures.length) {
+      listEl.innerHTML = '';
+      hp.alderonFeatures.forEach((text, i) => {
+        const li = document.createElement('li');
+        li.className = 'alderon-feature-item';
+        const num = document.createElement('span');
+        num.className = 'afi-num';
+        num.textContent = String(i + 1).padStart(2, '0');
+        const t = document.createElement('span');
+        t.className = 'afi-text';
+        t.textContent = text;
+        li.append(num, t);
+        listEl.appendChild(li);
+      });
     }
   }
 

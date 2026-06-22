@@ -525,6 +525,74 @@
     .hp-section-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; margin-bottom: 4px; }
     .hp-section-sub   { font-size: 13px; color: var(--text-2); }
 
+    .hp-field { margin-top: 18px; }
+    .hp-field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .hp-field-input {
+      width: 100%;
+      max-width: 560px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 150ms var(--ease);
+    }
+    .hp-field-input:focus { outline: none; border-color: var(--accent); }
+    textarea.hp-field-input { resize: vertical; line-height: 1.5; }
+
+    .hp-feat-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 560px;
+      margin-bottom: 8px;
+    }
+    .hp-feat-row .hp-field-input { flex: 1; max-width: none; }
+    .hp-feat-num {
+      flex: 0 0 auto;
+      width: 28px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-3);
+    }
+    .hp-feat-del {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color 150ms var(--ease), color 150ms var(--ease);
+    }
+    .hp-feat-del:hover { border-color: #ef4444; color: #ef4444; }
+    .hp-feat-add {
+      margin-top: 4px;
+      padding: 8px 14px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 150ms var(--ease), color 150ms var(--ease);
+    }
+    .hp-feat-add:hover { border-color: var(--accent); color: var(--accent); }
+
     .hp-img-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -884,9 +952,25 @@
         <div class="hp-section">
           <div class="hp-section-hd">
             <h2 class="hp-section-title">Produk Unggulan — Alderon</h2>
-            <p class="hp-section-sub">Foto yang tampil di bagian produk unggulan. Klik untuk mengganti.</p>
+            <p class="hp-section-sub">Foto, judul, dan deskripsi yang tampil di bagian produk unggulan. Klik foto untuk mengganti.</p>
           </div>
           <div class="hp-img-grid" id="alderonImgGrid"></div>
+          <div class="hp-field">
+            <label class="hp-field-label" for="alderonTitleInput">Judul Produk Unggulan</label>
+            <input type="text" id="alderonTitleInput" class="hp-field-input" placeholder="MATTAKA">
+          </div>
+          <div class="hp-field">
+            <label class="hp-field-label" for="alderonSubInput">Subjudul</label>
+            <input type="text" id="alderonSubInput" class="hp-field-input" placeholder="Atap uPVC — Roof It. Prove It.">
+          </div>
+          <div class="hp-field">
+            <label class="hp-field-label" for="alderonDescInput">Deskripsi Produk Unggulan</label>
+            <textarea id="alderonDescInput" class="hp-field-input" rows="4" placeholder="Inovasi atap uPVC dengan pilihan Single & Double Layer..."></textarea>
+          </div>
+          <div class="hp-field">
+            <label class="hp-field-label">Poin Keunggulan</label>
+            <div id="alderonFeaturesEditor"></div>
+          </div>
         </div>
       </div>
 
@@ -2341,6 +2425,60 @@
       } catch {}
       renderHeroVideo();
       renderAlderonSlot();
+      document.getElementById('alderonTitleInput').value = hpState.alderonTitle || '';
+      document.getElementById('alderonSubInput').value   = hpState.alderonSub   || '';
+      document.getElementById('alderonDescInput').value  = hpState.alderonDesc  || '';
+      if (!Array.isArray(hpState.alderonFeatures)) hpState.alderonFeatures = [];
+      renderAlderonFeaturesEditor();
+    }
+
+    // Editable list of "Poin Keunggulan" bullets. Rows are backed directly by
+    // hpState.alderonFeatures, so add/remove/edit stay in sync without a separate
+    // collection step on save.
+    function renderAlderonFeaturesEditor() {
+      const wrap = document.getElementById('alderonFeaturesEditor');
+      wrap.innerHTML = '';
+      const feats = Array.isArray(hpState.alderonFeatures) ? hpState.alderonFeatures : [];
+      feats.forEach((text, i) => {
+        const row = document.createElement('div');
+        row.className = 'hp-feat-row';
+
+        const num = document.createElement('span');
+        num.className = 'hp-feat-num';
+        num.textContent = String(i + 1).padStart(2, '0');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'hp-field-input';
+        input.value = text;
+        input.placeholder = 'Tulis poin keunggulan...';
+        input.addEventListener('input', () => { hpState.alderonFeatures[i] = input.value; });
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'hp-feat-del';
+        del.textContent = '✕';
+        del.title = 'Hapus poin';
+        del.addEventListener('click', () => {
+          hpState.alderonFeatures.splice(i, 1);
+          renderAlderonFeaturesEditor();
+        });
+
+        row.append(num, input, del);
+        wrap.appendChild(row);
+      });
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'hp-feat-add';
+      add.textContent = '+ Tambah Poin';
+      add.addEventListener('click', () => {
+        if (!Array.isArray(hpState.alderonFeatures)) hpState.alderonFeatures = [];
+        hpState.alderonFeatures.push('');
+        renderAlderonFeaturesEditor();
+        wrap.querySelector('.hp-feat-row:last-child input')?.focus();
+      });
+      wrap.appendChild(add);
     }
 
     function makeImgSlot(currentSrc, label, onUpload) {
@@ -2578,6 +2716,13 @@
       const btn = document.getElementById('saveHomepageBtn');
       btn.textContent = 'Menyimpan...';
       btn.disabled = true;
+      // Send all featured-product copy as typed; empty bullet rows are dropped.
+      hpState.alderonTitle = document.getElementById('alderonTitleInput').value.trim();
+      hpState.alderonSub   = document.getElementById('alderonSubInput').value.trim();
+      hpState.alderonDesc  = document.getElementById('alderonDescInput').value.trim();
+      hpState.alderonFeatures = (hpState.alderonFeatures || [])
+        .map(s => (s || '').trim())
+        .filter(Boolean);
       try {
         const r = await fetch('/api/homepage', {
           method: 'PUT',

@@ -54,6 +54,13 @@ let _db = null, _bucket = null;
 
 if (process.env.FIREBASE_PRIVATE_KEY) {
   try {
+    // We always authenticate with an explicit service-account cert, so the
+    // Google auth client never needs to probe the GCP metadata server
+    // (169.254.169.254) to detect its "universe domain". On networks where that
+    // bogus address is dropped rather than refused, the probe hangs for the full
+    // ~170s timeout during admin.storage().bucket() before falling back. Disable
+    // it so init stays fast. Guarded with || so an explicit value still wins.
+    process.env.METADATA_SERVER_DETECTION = process.env.METADATA_SERVER_DETECTION || 'none';
     const admin = require('firebase-admin');
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -64,6 +71,11 @@ if (process.env.FIREBASE_PRIVATE_KEY) {
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
     _db     = admin.firestore();
+    // Use Firestore's REST/HTTP transport instead of the default gRPC. On
+    // networks that block/throttle gRPC, the first read otherwise stalls ~30s
+    // before connecting; REST isn't affected and stays at ~200ms. Safe in
+    // production since we authenticate with an explicit service-account cert.
+    _db.settings({ preferRest: true });
     _bucket = admin.storage().bucket();
     console.log('  Firebase: Firestore + Storage aktif');
   } catch (e) {
@@ -93,6 +105,39 @@ const DOCS_DIR       = path.join(__dirname, 'docs');
 
 const readLocalJSON  = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const writeLocalJSON = (f, d) => { try { fs.writeFileSync(f, JSON.stringify(d, null, 2)); } catch {} };
+
+// Canonical default content for the homepage "Produk Unggulan" (featured
+// product) block. These are the single source of truth for the copy that used
+// to be hardcoded in index.html. Stored values override these per-field; any
+// field not yet customised falls back here — so GET /api/homepage always
+// returns the full content and the backoffice opens pre-filled with the
+// current live text/bullets instead of blank fields.
+const ALDERON_DEFAULTS = {
+  alderonTitle: 'MATTAKA',
+  alderonSub:   'Atap uPVC — Roof It. Prove It.',
+  alderonDesc:  'Inovasi atap uPVC dengan pilihan Single & Double Layer. Super profile mencegah rembesan air hujan dan Dual Tone menghilangkan tembus cahaya — ruangan lebih sejuk, lebih tenang, dengan garansi hingga 15 tahun.',
+  alderonFeatures: [
+    'UV Protection — ruangan lebih sejuk & dingin',
+    'Super Profile — cegah rembesan air hujan (double layer)',
+    'Dual Tone — hilangkan tembus cahaya (single layer)',
+    'Anti Karat & Tahan Kontaminasi Bahan Kimia',
+    'Garansi Terpanjang Hingga 15 Tahun',
+  ],
+};
+
+// Merge stored homepage data over the featured-product defaults. A field counts
+// as "customised" only when it is actually present, so an admin can still clear
+// text to an empty string without it snapping back to the default.
+function withAlderonDefaults(data) {
+  const d = data || {};
+  return {
+    ...d,
+    alderonTitle:    d.alderonTitle    !== undefined ? d.alderonTitle    : ALDERON_DEFAULTS.alderonTitle,
+    alderonSub:      d.alderonSub       !== undefined ? d.alderonSub      : ALDERON_DEFAULTS.alderonSub,
+    alderonDesc:     d.alderonDesc      !== undefined ? d.alderonDesc     : ALDERON_DEFAULTS.alderonDesc,
+    alderonFeatures: Array.isArray(d.alderonFeatures) ? d.alderonFeatures : ALDERON_DEFAULTS.alderonFeatures,
+  };
+}
 
 // Ensure homepage.json exists locally
 if (!fs.existsSync(HOMEPAGE_FILE)) {
@@ -907,9 +952,9 @@ app.get('/api/homepage', async (_, res) => {
   try {
     if (USE_FB) {
       const snap = await _db.collection('config').doc('homepage').get();
-      return res.json(snap.exists ? snap.data() : {});
+      return res.json(withAlderonDefaults(snap.exists ? snap.data() : {}));
     }
-    res.json(readLocalJSON(HOMEPAGE_FILE) || {});
+    res.json(withAlderonDefaults(readLocalJSON(HOMEPAGE_FILE) || {}));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -923,6 +968,10 @@ app.put('/api/homepage', requireAuth, async (req, res) => {
       if (req.body.heroPoster !== undefined)   data.heroPoster   = req.body.heroPoster;
       if (Array.isArray(req.body.heroImages))  data.heroImages   = req.body.heroImages;
       if (req.body.alderonImage !== undefined) data.alderonImage = req.body.alderonImage;
+      if (req.body.alderonTitle !== undefined) data.alderonTitle = req.body.alderonTitle;
+      if (req.body.alderonSub !== undefined)   data.alderonSub   = req.body.alderonSub;
+      if (req.body.alderonDesc !== undefined)  data.alderonDesc  = req.body.alderonDesc;
+      if (Array.isArray(req.body.alderonFeatures)) data.alderonFeatures = req.body.alderonFeatures;
       if (Array.isArray(req.body.portfolio))   data.portfolio    = req.body.portfolio;
       await ref.set(data);
       return res.json(data);
@@ -932,6 +981,10 @@ app.put('/api/homepage', requireAuth, async (req, res) => {
     if (req.body.heroPoster !== undefined)   data.heroPoster   = req.body.heroPoster;
     if (Array.isArray(req.body.heroImages))  data.heroImages   = req.body.heroImages;
     if (req.body.alderonImage !== undefined) data.alderonImage = req.body.alderonImage;
+    if (req.body.alderonTitle !== undefined) data.alderonTitle = req.body.alderonTitle;
+    if (req.body.alderonSub !== undefined)   data.alderonSub   = req.body.alderonSub;
+    if (req.body.alderonDesc !== undefined)  data.alderonDesc  = req.body.alderonDesc;
+    if (Array.isArray(req.body.alderonFeatures)) data.alderonFeatures = req.body.alderonFeatures;
     if (Array.isArray(req.body.portfolio))   data.portfolio    = req.body.portfolio;
     writeLocalJSON(HOMEPAGE_FILE, data);
     res.json(data);
