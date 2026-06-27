@@ -231,7 +231,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         <input type="search" id="productsSearch" placeholder="Cari material..." autocomplete="off">
       </div>
-      <div id="categories" class="categories"></div>
+      <div class="cat-filter" id="productsCatFilter">
+        <button class="cat-toggle" id="productsCatToggle" type="button" aria-expanded="true">
+          <span>Kategori</span>
+          <svg class="cat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="categories" class="categories"></div>
+      </div>
       <div id="productsGrid" class="products-grid"></div>
     </div>
   </section>
@@ -385,115 +391,8 @@
         <h2 class="faq-title">Ada yang Ingin<br><em>Anda Tanyakan?</em></h2>
       </div>
 
-      <div class="faq-list">
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">01</span>
-            <span class="faq-q-text">Bagaimana cara memesan produk?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <p>Pemesanan dapat dilakukan melalui beberapa cara:</p>
-                <ol>
-                  <li>Hubungi CS kami via WhatsApp di <strong>085199881929</strong></li>
-                  <li>Isi form kontak di halaman ini</li>
-                  <li>Kunjungi langsung ke kantor & gudang kami di Tangerang</li>
-                </ol>
-                <p style="margin-top:10px">Tim kami akan membantu Anda memilih produk yang sesuai kebutuhan dan memberikan penawaran harga terbaik.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">02</span>
-            <span class="faq-q-text">Metode pembayaran apa saja yang tersedia?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <p>Kami menerima pembayaran melalui:</p>
-                <ul>
-                  <li>Transfer Bank BCA</li>
-                  <li>Pembayaran tunai (untuk pembelian langsung di gudang)</li>
-                </ul>
-                <p style="margin-top:10px">Bukti pembayaran dikirimkan melalui WhatsApp setelah transaksi selesai.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">03</span>
-            <span class="faq-q-text">Apakah melayani pengiriman ke luar kota?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <p>Ya, kami melayani pengiriman ke seluruh wilayah Indonesia. Ongkos kirim akan disesuaikan dengan lokasi tujuan dan volume pesanan. Hubungi CS kami untuk mendapatkan estimasi biaya pengiriman.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">04</span>
-            <span class="faq-q-text">Bagaimana cara membersihkan produk atap?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <p>Serbuk besi atau metal akibat kegiatan pengeboran/pemotongan harus segera dibersihkan dari permukaan atap untuk menghindari karat. Kotoran keras yang melekat pada bahan atap dapat dibersihkan menggunakan air bersih dan kain lembut. Hindari bahan kimia keras.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">05</span>
-            <span class="faq-q-text">Bagaimana cara penyimpanan yang benar?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <ul>
-                  <li>Hindari penumpukan lembaran atap langsung di tanah</li>
-                  <li>Kelompokkan berdasarkan type dan ukuran masing-masing</li>
-                  <li>Letakkan di atas balok kayu dengan posisi landai untuk menghindari genangan air</li>
-                  <li>Simpan di tempat yang terlindung dari paparan cuaca langsung</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question">
-            <span class="faq-num">06</span>
-            <span class="faq-q-text">Apakah bisa request harga produk?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-body">
-            <div class="faq-body-inner">
-              <div class="faq-answer">
-                <p>Tentu. Hubungi CS kami via WhatsApp dengan menyebutkan jenis produk, ukuran, dan jumlah yang dibutuhkan. Kami akan memberikan penawaran harga yang kompetitif sesuai kebutuhan proyek Anda.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <!-- Populated from /api/faq (managed in the back office) -->
+      <div class="faq-list" id="faqList"></div>
     </div>
   </section>
 
@@ -664,6 +563,23 @@
             <h3 class="pd-projects-title">Produk yang Digunakan</h3>
           </div>
           <div class="prj-products-grid" id="prjProductsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Berita Lainnya — older news list (in-app page, populated via JS) -->
+  <div class="pd nl" id="newsList" aria-hidden="true">
+    <div class="pd-backdrop" data-nl-close></div>
+    <div class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="nlTitle">
+      <button class="pd-close nl-back" id="nlClose" aria-label="Kembali">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="pd-scroll" id="nlScroll">
+        <div class="nl-body">
+          <div class="section-label">Arsip Berita</div>
+          <h2 class="nl-title" id="nlTitle">Berita Lainnya</h2>
+          <div class="nl-items" id="nlItems"></div>
         </div>
       </div>
     </div>

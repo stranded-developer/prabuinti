@@ -964,6 +964,27 @@ body::before {
   margin-bottom: 36px;
   flex-wrap: wrap;
 }
+/* Collapsible category filter (toggle shows/hides the chip row) */
+.cat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+  transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+.cat-toggle:hover { color: var(--text); border-color: var(--accent); }
+.cat-toggle-chevron { width: 14px; height: 14px; transition: transform 220ms var(--ease-out); }
+.cat-filter.collapsed .cat-toggle-chevron { transform: rotate(-90deg); }
+.cat-filter.collapsed .categories { display: none; }
 .cat-btn {
   padding: 6px 14px;
   border-radius: 100px;
@@ -1178,6 +1199,14 @@ body::before {
 @media (hover: hover) and (pointer: fine) {
   .project-card:hover img { transform: scale(1.07); }
 }
+/* Auto-rotating cover: two stacked layers that crossfade between images. */
+.project-card.pc-carousel img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 600ms var(--ease-out), transform 500ms var(--ease-out);
+}
+.project-card.pc-carousel img.pc-on { opacity: 1; }
 .project-label {
   position: absolute;
   bottom: 0;
@@ -2223,6 +2252,82 @@ body.preloading { overflow: hidden; }
 }
 .news-rail-more:hover { border-color: var(--accent); color: var(--text); background: var(--bg-card-2); }
 
+/* === Berita Lainnya — older-news list page === */
+.nl .pd-dialog {
+  max-width: 720px;
+}
+
+/* Back button: a left-chevron, so skip the close button's 90deg rotation. */
+.nl-back:hover  { transform: scale(1.05); background: var(--accent); color: #fff; }
+.nl-back:active { transform: scale(0.95); }
+
+.nl-body {
+  padding: 56px 40px 40px;
+}
+
+.nl-title {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 8px 0 28px;
+  color: var(--text);
+}
+
+.nl-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.nl-item {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 8px;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), padding-left 160ms var(--ease-out);
+}
+
+.nl-item:first-child {
+  border-top: 1px solid var(--border);
+}
+
+.nl-item:hover {
+  background: var(--bg-card);
+  padding-left: 16px;
+}
+
+.nl-item-date {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.nl-item-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.nl-empty {
+  padding: 32px 8px;
+  color: var(--text-2, #888);
+  font-size: 15px;
+}
+
+@media (max-width: 520px) {
+  .nl-body { padding: 52px 22px 32px; }
+  .nl-item-title { font-size: 15.5px; }
+}
+
 /* Compact, clickable news cards inside the rail */
 .news-card {
   display: flex;
@@ -2357,6 +2462,45 @@ body.preloading { overflow: hidden; }
   height: 100%;
   object-fit: cover;
 }
+/* Manual hero carousel controls (multi-image projects) */
+.prj-cz-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  transition: background 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.prj-cz-nav svg { width: 20px; height: 20px; }
+.prj-cz-nav:hover { background: var(--accent); }
+.prj-cz-prev { left: 12px; }
+.prj-cz-next { right: 12px; }
+.prj-cz-prev:active { transform: translateY(-50%) scale(0.92); }
+.prj-cz-next:active { transform: translateY(-50%) scale(0.92); }
+.prj-cz-dots {
+  position: absolute;
+  left: 0; right: 0; bottom: 12px;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+.prj-cz-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: background 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.prj-cz-dot.active { background: #fff; transform: scale(1.25); }
 .pd-hero-media::after {
   content: '';
   position: absolute;

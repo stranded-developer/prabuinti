@@ -96,6 +96,8 @@ const PROJECTS_FILE  = path.join(__dirname, 'data', 'projects.json');
 const NEWS_FILE      = path.join(__dirname, 'data', 'news.json');
 const COMMENTS_FILE  = path.join(__dirname, 'data', 'comments.json');
 const USERS_FILE     = path.join(__dirname, 'data', 'users.json');
+const FAQ_FILE       = path.join(__dirname, 'data', 'faq.json');
+const DOC_CATEGORIES_FILE = path.join(__dirname, 'data', 'doc-categories.json');
 const UPLOADS_DIR    = path.join(__dirname, 'uploads');
 const DOCS_DIR       = path.join(__dirname, 'docs');
 
@@ -165,6 +167,16 @@ if (!fs.existsSync(CATEGORIES_FILE)) {
   ]);
 }
 
+// Ensure doc-categories.json exists locally (default document categories)
+if (!fs.existsSync(DOC_CATEGORIES_FILE)) {
+  writeLocalJSON(DOC_CATEGORIES_FILE, [
+    { id: 1, name: 'Sertifikat', order: 1 },
+    { id: 2, name: 'Brosur',     order: 2 },
+    { id: 3, name: 'Katalog',    order: 3 },
+    { id: 4, name: 'Panduan',    order: 4 },
+  ]);
+}
+
 // ============================================================
 // Firebase helpers
 // ============================================================
@@ -192,6 +204,37 @@ async function fbDeleteFile(folder, filename) {
   try { await _bucket.file(folder + '/' + filename).delete(); } catch {}
 }
 
+// Extract the Storage object path (e.g. "uploads/123-ab.jpg") from a stored URL.
+// Handles the Firebase download URL ("…/o/uploads%2F123-ab.jpg?alt=media&token=…")
+// and the plain GCS URL ("storage.googleapis.com/<bucket>/uploads/123-ab.jpg").
+function fbObjectPathFromUrl(url) {
+  try {
+    const u = new URL(url);
+    const m = u.pathname.match(/\/o\/(.+)$/);
+    if (m) return decodeURIComponent(m[1]);
+    if (u.hostname === 'storage.googleapis.com') {
+      const parts = u.pathname.replace(/^\/+/, '').split('/');
+      parts.shift(); // drop the bucket segment
+      return parts.join('/');
+    }
+  } catch {}
+  return null;
+}
+
+// Delete an uploaded image given its public URL — actually removes the file from
+// Firebase Storage (production) or the local uploads dir (dev). Best-effort.
+async function deleteImageByUrl(url) {
+  if (!url) return;
+  if (USE_FB) {
+    if (!/(?:firebasestorage|storage)\.googleapis\.com/.test(url)) return;
+    const objectPath = fbObjectPathFromUrl(url);
+    if (objectPath) { try { await _bucket.file(objectPath).delete(); } catch {} }
+  } else {
+    if (!url.startsWith('/uploads/')) return;
+    try { const f = path.join(UPLOADS_DIR, path.basename(url)); if (fs.existsSync(f)) fs.unlinkSync(f); } catch {}
+  }
+}
+
 async function fbSignedUrl(folder, filename, expiresMs) {
   const [url] = await _bucket.file(folder + '/' + filename).getSignedUrl({
     action:  'read',
@@ -215,6 +258,34 @@ async function ensureBucketCors() {
     console.error('  Storage CORS error:', e.message);
   }
 }
+
+// Default FAQ content (originally hardcoded in index.html). Used to seed both
+// the local faq.json and an empty Firestore `faq` collection. Answers are plain
+// text: blank lines separate paragraphs, "- " lines become bullet lists, and
+// "1." / "2." lines become numbered lists (see renderAnswer in main.js).
+const DEFAULT_FAQ = [
+  { id: 1, order: 1,
+    question: 'Bagaimana cara memesan produk?',
+    answer: 'Pemesanan dapat dilakukan melalui beberapa cara:\n1. Hubungi CS kami via WhatsApp di 085199881929\n2. Isi form kontak di halaman ini\n3. Kunjungi langsung ke kantor & gudang kami di Tangerang\n\nTim kami akan membantu Anda memilih produk yang sesuai kebutuhan dan memberikan penawaran harga terbaik.' },
+  { id: 2, order: 2,
+    question: 'Metode pembayaran apa saja yang tersedia?',
+    answer: 'Kami menerima pembayaran melalui:\n- Transfer Bank BCA\n- Pembayaran tunai (untuk pembelian langsung di gudang)\n\nBukti pembayaran dikirimkan melalui WhatsApp setelah transaksi selesai.' },
+  { id: 3, order: 3,
+    question: 'Apakah melayani pengiriman ke luar kota?',
+    answer: 'Ya, kami melayani pengiriman ke seluruh wilayah Indonesia. Ongkos kirim akan disesuaikan dengan lokasi tujuan dan volume pesanan. Hubungi CS kami untuk mendapatkan estimasi biaya pengiriman.' },
+  { id: 4, order: 4,
+    question: 'Bagaimana cara membersihkan produk atap?',
+    answer: 'Serbuk besi atau metal akibat kegiatan pengeboran/pemotongan harus segera dibersihkan dari permukaan atap untuk menghindari karat. Kotoran keras yang melekat pada bahan atap dapat dibersihkan menggunakan air bersih dan kain lembut. Hindari bahan kimia keras.' },
+  { id: 5, order: 5,
+    question: 'Bagaimana cara penyimpanan yang benar?',
+    answer: '- Hindari penumpukan lembaran atap langsung di tanah\n- Kelompokkan berdasarkan type dan ukuran masing-masing\n- Letakkan di atas balok kayu dengan posisi landai untuk menghindari genangan air\n- Simpan di tempat yang terlindung dari paparan cuaca langsung' },
+  { id: 6, order: 6,
+    question: 'Apakah bisa request harga produk?',
+    answer: 'Tentu. Hubungi CS kami via WhatsApp dengan menyebutkan jenis produk, ukuran, dan jumlah yang dibutuhkan. Kami akan memberikan penawaran harga yang kompetitif sesuai kebutuhan proyek Anda.' },
+];
+
+// Ensure faq.json exists locally (default FAQ content) for the dev/local fallback.
+if (!fs.existsSync(FAQ_FILE)) writeLocalJSON(FAQ_FILE, DEFAULT_FAQ);
 
 // Seed Firestore from local JSON on first cold start (runs once when collection empty)
 async function seedFirestore() {
@@ -274,6 +345,28 @@ async function seedFirestore() {
       }
     }
 
+    const faqSnap = await _db.collection('faq').limit(1).get();
+    if (faqSnap.empty) {
+      const faqs = readLocalJSON(FAQ_FILE) || DEFAULT_FAQ;
+      if (faqs.length) {
+        const batch = _db.batch();
+        faqs.forEach(f => batch.set(_db.collection('faq').doc(String(f.id)), f));
+        await batch.commit();
+        console.log(`  Firestore: seeded ${faqs.length} faq`);
+      }
+    }
+
+    const docCatSnap = await _db.collection('docCategories').limit(1).get();
+    if (docCatSnap.empty) {
+      const cats = readLocalJSON(DOC_CATEGORIES_FILE) || [];
+      if (cats.length) {
+        const batch = _db.batch();
+        cats.forEach(c => batch.set(_db.collection('docCategories').doc(String(c.id)), c));
+        await batch.commit();
+        console.log(`  Firestore: seeded ${cats.length} doc-categories`);
+      }
+    }
+
     const hpRef  = _db.collection('config').doc('homepage');
     const hpSnap = await hpRef.get();
     if (!hpSnap.exists) {
@@ -324,6 +417,36 @@ async function setUserName(phone, name) {
   writeLocalJSON(USERS_FILE, list);
 }
 
+// Persist every OTP-verified phone (document-download + comment flows) so the
+// admin can see who has verified. Never overwrites an existing display name;
+// keeps the first-seen source and timestamp, refreshes lastVerifiedAt.
+async function recordVerifiedPhone(phone, source) {
+  const now = new Date().toISOString();
+  if (USE_FB) {
+    const ref  = _db.collection('users').doc(phone);
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : {};
+    await ref.set({
+      phone,
+      name:           data.name   || '',
+      source:         data.source || source,
+      createdAt:      data.createdAt || now,
+      lastVerifiedAt: now,
+    }, { merge: true });
+    return;
+  }
+  const list = readLocalJSON(USERS_FILE) || [];
+  const i = list.findIndex(x => x.phone === phone);
+  if (i >= 0) {
+    list[i].lastVerifiedAt = now;
+    if (!list[i].createdAt) list[i].createdAt = now;
+    if (!list[i].source)    list[i].source = source;
+  } else {
+    list.push({ phone, name: '', source, createdAt: now, lastVerifiedAt: now });
+  }
+  writeLocalJSON(USERS_FILE, list);
+}
+
 // ============================================================
 // Multer — memory storage so we can route to disk or Firebase
 // ============================================================
@@ -335,7 +458,7 @@ const uploadImg = multer({
 
 const uploadPDF = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_, f, cb) => f.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Hanya PDF')),
 });
 
@@ -602,6 +725,15 @@ async function readCategories() {
   return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
+async function readDocCategories() {
+  if (USE_FB) {
+    const snap = await _db.collection('docCategories').get();
+    return snap.docs.map(d => d.data()).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+  const list = readLocalJSON(DOC_CATEGORIES_FILE) || [];
+  return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
 app.get('/api/categories', async (_, res) => {
   try {
     res.json(await readCategories());
@@ -695,6 +827,102 @@ app.put('/api/categories', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// Document categories — mirror product categories (model: { id, name, order }).
+// Documents reference a category by name. Renaming cascades to documents.
+// ============================================================
+app.get('/api/doc-categories', async (_, res) => {
+  try {
+    res.json(await readDocCategories());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/doc-categories', requireAuth, async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+    const list = await readDocCategories();
+    if (list.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ error: 'Kategori sudah ada' });
+    }
+    const maxId    = list.reduce((m, c) => Math.max(m, c.id || 0), 0);
+    const maxOrder = list.reduce((m, c) => Math.max(m, c.order || 0), 0);
+    const item = { id: maxId + 1, name, order: maxOrder + 1 };
+    if (USE_FB) {
+      await _db.collection('docCategories').doc(String(item.id)).set(item);
+    } else {
+      writeLocalJSON(DOC_CATEGORIES_FILE, [...(readLocalJSON(DOC_CATEGORIES_FILE) || []), item]);
+    }
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Rename a doc category — cascades the new name to every document using the old one.
+app.put('/api/doc-categories/:id', requireAuth, async (req, res) => {
+  try {
+    const id   = Number(req.params.id);
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+    const list = await readDocCategories();
+    const cat  = list.find(c => c.id === id);
+    if (!cat) return res.status(404).json({ error: 'Kategori tidak ditemukan' });
+    if (list.some(c => c.id !== id && c.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ error: 'Kategori sudah ada' });
+    }
+    const oldName = cat.name;
+    const updated = { ...cat, name };
+    if (USE_FB) {
+      await _db.collection('docCategories').doc(String(id)).set(updated);
+      if (oldName !== name) {
+        const docs = await _db.collection('documents').where('category', '==', oldName).get();
+        if (!docs.empty) {
+          const batch = _db.batch();
+          docs.forEach(d => batch.update(d.ref, { category: name }));
+          await batch.commit();
+        }
+      }
+    } else {
+      const cats = (readLocalJSON(DOC_CATEGORIES_FILE) || []).map(c => c.id === id ? updated : c);
+      writeLocalJSON(DOC_CATEGORIES_FILE, cats);
+      if (oldName !== name) {
+        const docs = (readLocalJSON(DOCUMENTS_FILE) || []).map(d => d.category === oldName ? { ...d, category: name } : d);
+        writeLocalJSON(DOCUMENTS_FILE, docs);
+      }
+    }
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/doc-categories/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (USE_FB) {
+      await _db.collection('docCategories').doc(String(id)).delete();
+    } else {
+      writeLocalJSON(DOC_CATEGORIES_FILE, (readLocalJSON(DOC_CATEGORIES_FILE) || []).filter(c => c.id !== id));
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reorder — body: { ids: [orderedIds...] }. Sets each category's order to its index.
+app.put('/api/doc-categories', requireAuth, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number) : null;
+    if (!ids) return res.status(400).json({ error: 'ids harus berupa array' });
+    if (USE_FB) {
+      const batch = _db.batch();
+      ids.forEach((id, i) => batch.update(_db.collection('docCategories').doc(String(id)), { order: i + 1 }));
+      await batch.commit();
+    } else {
+      const byId = new Map((readLocalJSON(DOC_CATEGORIES_FILE) || []).map(c => [c.id, c]));
+      ids.forEach((id, i) => { const c = byId.get(id); if (c) c.order = i + 1; });
+      writeLocalJSON(DOC_CATEGORIES_FILE, [...byId.values()]);
+    }
+    res.json(await readDocCategories());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Upload image
 // ============================================================
 app.post('/api/upload', requireAuth, uploadImg.single('image'), async (req, res) => {
@@ -780,7 +1008,7 @@ app.get('/api/documents', async (_, res) => {
       }));
     }
     const list = readLocalJSON(DOCUMENTS_FILE) || [];
-    res.json(list.map(({ id, title, description, size, uploadedAt }) => ({ id, title, description, size, uploadedAt })));
+    res.json(list.map(({ id, title, description, category, size, uploadedAt }) => ({ id, title, description, category: category || '', size, uploadedAt })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -794,7 +1022,7 @@ app.post('/api/documents', requireAuth, uploadPDF.single('file'), async (req, re
       const snap  = await _db.collection('documents').get();
       const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
       const { filename } = await fbUploadFile(req.file.buffer, 'application/pdf', 'docs', '.pdf', false);
-      const item = { id: maxId + 1, title: req.body.title || req.file.originalname.replace('.pdf', ''), description: req.body.description || '', filename, size, uploadedAt: new Date().toISOString().slice(0, 10) };
+      const item = { id: maxId + 1, title: req.body.title || req.file.originalname.replace('.pdf', ''), description: req.body.description || '', category: req.body.category || '', filename, size, uploadedAt: new Date().toISOString().slice(0, 10) };
       await _db.collection('documents').doc(String(item.id)).set(item);
       const { filename: _f, ...pub } = item;
       return res.status(201).json(pub);
@@ -804,11 +1032,93 @@ app.post('/api/documents', requireAuth, uploadPDF.single('file'), async (req, re
     const maxId    = list.reduce((m, d) => Math.max(m, d.id), 0);
     const diskFile = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + '.pdf';
     fs.writeFileSync(path.join(DOCS_DIR, diskFile), req.file.buffer);
-    const item = { id: maxId + 1, title: req.body.title || req.file.originalname.replace('.pdf', ''), description: req.body.description || '', filename: diskFile, size, uploadedAt: new Date().toISOString().slice(0, 10) };
+    const item = { id: maxId + 1, title: req.body.title || req.file.originalname.replace('.pdf', ''), description: req.body.description || '', category: req.body.category || '', filename: diskFile, size, uploadedAt: new Date().toISOString().slice(0, 10) };
     list.push(item);
     writeLocalJSON(DOCUMENTS_FILE, list);
     const { filename: _f, ...pub } = item;
     res.status(201).json(pub);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Direct-to-storage PDF upload (production). Mirrors the video flow so PDFs
+// larger than the serverless function's ~4.5MB request-body limit can be
+// uploaded by PUTting straight to Cloud Storage via a signed URL.
+//   1. POST /api/documents/init      -> { mode:'signed', uploadUrl, objectPath }
+//   2. browser PUTs the PDF to uploadUrl (Content-Type: application/pdf)
+//   3. POST /api/documents/finalize  { objectPath, title, description } -> doc
+// In local dev (no Firebase) returns { mode:'direct' } and the browser falls
+// back to the multipart POST /api/documents above.
+app.post('/api/documents/init', requireAuth, async (_req, res) => {
+  try {
+    if (!USE_FB) return res.json({ mode: 'direct' });
+    const filename   = Date.now() + '-' + crypto.randomBytes(4).toString('hex') + '.pdf';
+    const objectPath = 'docs/' + filename;
+    const [uploadUrl] = await _bucket.file(objectPath).getSignedUrl({
+      version: 'v4',
+      action:  'write',
+      expires: Date.now() + 15 * 60 * 1000,
+      contentType: 'application/pdf',
+    });
+    res.json({ mode: 'signed', uploadUrl, objectPath });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/documents/finalize', requireAuth, async (req, res) => {
+  try {
+    if (!USE_FB) return res.status(400).json({ error: 'Tidak tersedia' });
+    const objectPath = req.body && req.body.objectPath;
+    if (!objectPath || !objectPath.startsWith('docs/')) return res.status(400).json({ error: 'Path tidak valid' });
+    const filename = objectPath.slice('docs/'.length);
+
+    const file     = _bucket.file(objectPath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(400).json({ error: 'File belum terupload' });
+    await file.setMetadata({ contentType: 'application/pdf', cacheControl: STORAGE_CACHE_CONTROL });
+    const [meta] = await file.getMetadata();
+
+    const bytes = Number(meta.size) || 0;
+    const size  = bytes < 1024 ? bytes + ' B' : bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    const snap  = await _db.collection('documents').get();
+    const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
+    const item  = {
+      id: maxId + 1,
+      title: (req.body.title || '').trim() || filename.replace('.pdf', ''),
+      description: (req.body.description || '').trim(),
+      category: (req.body.category || '').trim(),
+      filename, size,
+      uploadedAt: new Date().toISOString().slice(0, 10),
+    };
+    await _db.collection('documents').doc(String(item.id)).set(item);
+    const { filename: _f, ...pub } = item;
+    res.status(201).json(pub);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Edit a document's metadata (title / description / category). The PDF itself
+// isn't replaced here — re-upload for that.
+app.put('/api/documents/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const patch = {};
+    if (req.body.title !== undefined)       patch.title       = String(req.body.title);
+    if (req.body.description !== undefined) patch.description = String(req.body.description);
+    if (req.body.category !== undefined)    patch.category    = String(req.body.category);
+    if (USE_FB) {
+      const ref  = _db.collection('documents').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'Dokumen tidak ditemukan' });
+      const updated = { ...snap.data(), ...patch, id };
+      await ref.set(updated);
+      const { filename: _f, ...pub } = updated;
+      return res.json(pub);
+    }
+    const list = readLocalJSON(DOCUMENTS_FILE) || [];
+    const idx  = list.findIndex(d => d.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Dokumen tidak ditemukan' });
+    list[idx] = { ...list[idx], ...patch, id };
+    writeLocalJSON(DOCUMENTS_FILE, list);
+    const { filename: _f, ...pub } = list[idx];
+    res.json(pub);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -906,6 +1216,7 @@ app.post('/api/otp/verify', async (req, res) => {
     }
 
     otpStore.delete(normalized);
+    await recordVerifiedPhone(normalized, 'download');
     const token = crypto.randomBytes(24).toString('hex');
 
     if (USE_FB) {
@@ -942,6 +1253,31 @@ app.get('/api/download/:token', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${entry.title}.pdf"`);
     res.setHeader('Content-Type', 'application/pdf');
     fs.createReadStream(f).pipe(res);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// Admin: verified contacts (phone + name from both OTP flows)
+// ============================================================
+app.get('/api/users', requireAuth, async (_req, res) => {
+  try {
+    let list;
+    if (USE_FB) {
+      const snap = await _db.collection('users').get();
+      list = snap.docs.map(d => d.data());
+    } else {
+      list = readLocalJSON(USERS_FILE) || [];
+    }
+    list = list.map(u => ({
+      phone:          u.phone || '',
+      name:           u.name  || '',
+      source:         u.source || '',
+      createdAt:      u.createdAt || '',
+      lastVerifiedAt: u.lastVerifiedAt || '',
+    }));
+    list.sort((a, b) =>
+      String(b.lastVerifiedAt || b.createdAt).localeCompare(String(a.lastVerifiedAt || a.createdAt)));
+    res.json(list);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1047,15 +1383,25 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
       const updated = { ...prev, ...patch, id };
       await ref.set(updated);
       if (patch.productIds) await mirrorProjectToProducts(id, updated.productIds || [], prev.productIds || []);
+      // Removed images: delete the actual files from Storage.
+      if (patch.images !== undefined) {
+        const gone = (prev.images || []).filter(u => !(updated.images || []).includes(u));
+        for (const u of gone) await deleteImageByUrl(u);
+      }
       return res.json(updated);
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
     const idx  = list.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-    const prevIds = list[idx].productIds || [];
-    list[idx] = { ...list[idx], ...patch, id };
+    const prev    = list[idx];
+    const prevIds = prev.productIds || [];
+    list[idx] = { ...prev, ...patch, id };
     writeLocalJSON(PROJECTS_FILE, list);
     if (patch.productIds) await mirrorProjectToProducts(id, list[idx].productIds || [], prevIds);
+    if (patch.images !== undefined) {
+      const gone = (prev.images || []).filter(u => !(list[idx].images || []).includes(u));
+      for (const u of gone) await deleteImageByUrl(u);
+    }
     res.json(list[idx]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1067,9 +1413,10 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('projects').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-      const { productIds } = snap.data();
+      const { productIds, images } = snap.data();
       await ref.delete();
       await mirrorProjectToProducts(id, [], productIds || []);
+      for (const u of (images || [])) await deleteImageByUrl(u);
       return res.json({ ok: true });
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
@@ -1077,6 +1424,7 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
     if (!item) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     writeLocalJSON(PROJECTS_FILE, list.filter(p => p.id !== id));
     await mirrorProjectToProducts(id, [], item.productIds || []);
+    for (const u of (item.images || [])) await deleteImageByUrl(u);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1195,6 +1543,95 @@ app.delete('/api/news/:id', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// FAQ (frequently asked questions — managed from the back office)
+// Model: { id, question, answer, order }. `answer` is plain text; the homepage
+// renders blank-line-separated blocks as paragraphs, "- " lines as bullet
+// lists, and "1." lines as numbered lists (see renderAnswer in main.js).
+// ============================================================
+async function readFaq() {
+  if (USE_FB) {
+    const snap = await _db.collection('faq').get();
+    return snap.docs.map(d => d.data()).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+  const list = readLocalJSON(FAQ_FILE) || [];
+  return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+app.get('/api/faq', async (_, res) => {
+  try {
+    res.json(await readFaq());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/faq', requireAuth, async (req, res) => {
+  try {
+    const list     = await readFaq();
+    const maxId    = list.reduce((m, f) => Math.max(m, f.id || 0), 0);
+    const maxOrder = list.reduce((m, f) => Math.max(m, f.order || 0), 0);
+    const item = { id: maxId + 1, question: req.body.question || '', answer: req.body.answer || '', order: maxOrder + 1 };
+    if (USE_FB) {
+      await _db.collection('faq').doc(String(item.id)).set(item);
+    } else {
+      writeLocalJSON(FAQ_FILE, [...(readLocalJSON(FAQ_FILE) || []), item]);
+    }
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reorder — body: { ids: [orderedIds...] }. Sets each FAQ's order to its index.
+app.put('/api/faq', requireAuth, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number) : null;
+    if (!ids) return res.status(400).json({ error: 'ids harus berupa array' });
+    if (USE_FB) {
+      const batch = _db.batch();
+      ids.forEach((id, i) => batch.update(_db.collection('faq').doc(String(id)), { order: i + 1 }));
+      await batch.commit();
+    } else {
+      const byId = new Map((readLocalJSON(FAQ_FILE) || []).map(f => [f.id, f]));
+      ids.forEach((id, i) => { const f = byId.get(id); if (f) f.order = i + 1; });
+      writeLocalJSON(FAQ_FILE, [...byId.values()]);
+    }
+    res.json(await readFaq());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/faq/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const patch = {};
+    if (req.body.question !== undefined) patch.question = req.body.question;
+    if (req.body.answer !== undefined)   patch.answer   = req.body.answer;
+    if (USE_FB) {
+      const ref  = _db.collection('faq').doc(String(id));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'FAQ tidak ditemukan' });
+      const updated = { ...snap.data(), ...patch, id };
+      await ref.set(updated);
+      return res.json(updated);
+    }
+    const list = readLocalJSON(FAQ_FILE) || [];
+    const idx  = list.findIndex(f => f.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'FAQ tidak ditemukan' });
+    list[idx] = { ...list[idx], ...patch, id };
+    writeLocalJSON(FAQ_FILE, list);
+    res.json(list[idx]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/faq/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (USE_FB) {
+      await _db.collection('faq').doc(String(id)).delete();
+    } else {
+      writeLocalJSON(FAQ_FILE, (readLocalJSON(FAQ_FILE) || []).filter(f => f.id !== id));
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Comment auth — phone OTP for website visitors who want to comment.
 // Reuses the OTP store with a 'c:' key namespace so it doesn't clash with
 // the document-download OTP flow. On success a 30-day phone-session token is
@@ -1235,6 +1672,7 @@ app.post('/api/comment-auth/verify', async (req, res) => {
     }
 
     otpStore.delete(key);
+    await recordVerifiedPhone(normalized, 'comment');
     const name  = await getUserName(normalized);
     const token = signUserToken(normalized, name);
     res.json({ ok: true, token, name, needName: !name });

@@ -234,6 +234,19 @@ const LazyImages = (function () {
 // Pick up static [data-lazy-src] images (partner logos, etc.)
 LazyImages.refresh();
 
+/* Collapsible category filter: a toggle button shows/hides its chip row by
+ * flipping `.collapsed` on the wrapping `.cat-filter`. Shared by the products
+ * and documents category menus. */
+function wireCatToggle(toggleId, filterId) {
+  const toggle = document.getElementById(toggleId);
+  const filter = document.getElementById(filterId);
+  if (!toggle || !filter) return;
+  toggle.addEventListener('click', () => {
+    const collapsed = filter.classList.toggle('collapsed');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+  });
+}
+
 /* === Shared catalog loader ===
  * Loads products + projects exactly once and exposes lookup maps so the
  * products grid, the project showcase, and both detail overlays stay in sync.
@@ -405,10 +418,46 @@ const ProjectDetail = (function () {
     location: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   };
 
-  function open(project) {
-    const images = Array.isArray(project.images) ? project.images : [];
+  // Manual prev/next + dots carousel over the hero image (multi-image projects).
+  function buildHeroCarousel(media, images) {
+    let cur = 0;
+    const mkNav = (cls, label, path) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'prj-cz prj-cz-nav ' + cls;
+      b.setAttribute('aria-label', label);
+      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+      return b;
+    };
+    const prev = mkNav('prj-cz-prev', 'Sebelumnya', 'M15 18l-6-6 6-6');
+    const next = mkNav('prj-cz-next', 'Berikutnya', 'M9 18l6-6-6-6');
+    const dots = document.createElement('div');
+    dots.className = 'prj-cz prj-cz-dots';
+    images.forEach((_, i) => {
+      const d = document.createElement('button');
+      d.type = 'button'; d.className = 'prj-cz-dot';
+      d.setAttribute('aria-label', 'Foto ' + (i + 1));
+      d.addEventListener('click', () => go(i));
+      dots.appendChild(d);
+    });
+    function go(i) {
+      cur = (i + images.length) % images.length;
+      heroImg.src = images[cur];
+      dots.querySelectorAll('.prj-cz-dot').forEach((d, j) => d.classList.toggle('active', j === cur));
+    }
+    prev.addEventListener('click', () => go(cur - 1));
+    next.addEventListener('click', () => go(cur + 1));
+    media.appendChild(prev); media.appendChild(next); media.appendChild(dots);
+    images.forEach(s => { const im = new Image(); im.src = s; });
+    go(0);
+  }
 
-    // Hero
+  function open(project) {
+    const images = (Array.isArray(project.images) ? project.images : []).filter(Boolean);
+
+    // Hero — clear any controls left over from a previous open.
+    const media = heroImg.parentElement;
+    media.querySelectorAll('.prj-cz').forEach(el => el.remove());
     if (images[0]) {
       heroImg.src = images[0];
       heroImg.style.display = '';
@@ -417,6 +466,7 @@ const ProjectDetail = (function () {
       heroImg.style.display = 'none';
     }
     heroImg.alt = project.title || '';
+    if (images.length > 1) buildHeroCarousel(media, images);
     nameEl.textContent = project.title || 'Proyek';
 
     // Meta — tahun + lokasi
@@ -613,16 +663,60 @@ async function renderProjectShowcase(portfolioFallback) {
   const { projects } = await Catalog.load();
 
   if (projects.length) {
+    // Auto-rotate a card's cover through all its images while it's on screen:
+    // one image every 2s, two full loops, then settle back on the first.
+    function attachProjectAutoCarousel(card, baseImg, images) {
+      card.classList.add('pc-carousel');
+      baseImg.classList.add('pc-on');
+      const overlay = document.createElement('img');
+      overlay.alt = baseImg.alt;
+      baseImg.insertAdjacentElement('afterend', overlay);
+      images.forEach(src => { const im = new Image(); im.src = src; }); // warm the cache
+
+      const layers = [baseImg, overlay];
+      let visible = 0, idx = 0, advances = 0, timer = null;
+      const MAX = images.length * 2;
+
+      function goTo(i) {
+        const nxt = layers[1 - visible];
+        nxt.src = images[i];
+        nxt.classList.add('pc-on');
+        layers[visible].classList.remove('pc-on');
+        visible = 1 - visible; idx = i;
+      }
+      function resetToFirst() {
+        layers[0].src = images[0]; layers[0].classList.add('pc-on');
+        layers[1].classList.remove('pc-on');
+        visible = 0; idx = 0;
+      }
+      function stop() { if (timer) { clearInterval(timer); timer = null; } }
+      function start() {
+        if (timer) return;
+        advances = 0;
+        timer = setInterval(() => {
+          goTo((idx + 1) % images.length);
+          if (++advances >= MAX) { stop(); if (idx !== 0) goTo(0); }
+        }, 2000);
+      }
+
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) start(); else { stop(); resetToFirst(); } });
+      }, { threshold: 0.5 });
+      io.observe(card);
+    }
+
     function makeProjectCard(pr) {
       const card = document.createElement('div');
       card.className = 'project-card reveal visible';
-      const cover = (pr.images && pr.images[0]) || '';
+      const images = (pr.images || []).filter(Boolean);
+      const cover = images[0] || '';
       if (cover) {
         const img = document.createElement('img');
         img.alt = pr.title || '';
         img.setAttribute('data-lazy-src', cover);
         card.appendChild(img);
         LazyImages.observe(img);
+        if (images.length > 1) attachProjectAutoCarousel(card, img, images);
       } else {
         card.innerHTML = `<div class="portfolio-placeholder"><span>${pr.title || 'Proyek'}</span></div>`;
       }
@@ -745,6 +839,8 @@ async function renderProjectShowcase(portfolioFallback) {
     catContainer.appendChild(btn);
   });
 
+  wireCatToggle('productsCatToggle', 'productsCatFilter');
+
   // Combine the active category with the free-text search box.
   function applyFilters() {
     const q = searchTerm.trim().toLowerCase();
@@ -810,6 +906,29 @@ async function renderProjectShowcase(portfolioFallback) {
   moreBtn.addEventListener('click', () => { page += 1; renderPage(); });
 
   applyFilters();
+})();
+
+/* === Overlay back-button / history nav ===
+ * Shared history handling for the fullscreen overlays (the "Berita Lainnya"
+ * list and the news detail). Each open() pushes a history entry and registers
+ * a DOM-only close fn; the browser/device back button — or an in-overlay
+ * back/close control calling requestClose() — pops it and closes the topmost
+ * overlay. Nesting works: open the list, then a detail on top, and back closes
+ * the detail first, then the list, then leaves the section.
+ */
+const OverlayNav = (function () {
+  const stack = []; // [{ name, close }] — topmost overlay last
+  function open(name, closeFn) {
+    stack.push({ name, close: closeFn });
+    history.pushState({ piOverlay: name }, '');
+  }
+  function requestClose() { if (stack.length) history.back(); }
+  window.addEventListener('popstate', () => {
+    const top = stack.pop();
+    if (top) top.close();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && stack.length) requestClose(); });
+  return { open, requestClose };
 })();
 
 /* === News Detail Overlay + Comments ===
@@ -1067,22 +1186,87 @@ const NewsDetail = (function () {
     renderCompose();
     clearInterval(pollTimer);
     pollTimer = setInterval(loadComments, 5000);
+    OverlayNav.open('nd', close);
   }
 
   function close() {
     root.classList.remove('open');
     root.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    // Only re-enable page scroll if no other overlay (e.g. the list underneath)
+    // is still open.
+    if (!document.querySelector('.pd.open')) document.body.style.overflow = '';
     clearInterval(pollTimer);
     mediaEl.innerHTML = ''; // stop any playing video
     isOpen = false;
   }
 
-  document.getElementById('ndClose').addEventListener('click', close);
-  root.querySelectorAll('[data-nd-close]').forEach(el => el.addEventListener('click', close));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) close(); });
+  const back = () => OverlayNav.requestClose();
+  document.getElementById('ndClose').addEventListener('click', back);
+  root.querySelectorAll('[data-nd-close]').forEach(el => el.addEventListener('click', back));
 
   return { open };
+})();
+
+/* === Berita Lainnya — older-news list (in-app page) ===
+ * A fullscreen overlay listing the title + date of every older post (those not
+ * shown in the rail). Opened from the "Berita Lainnya" button; the back/close
+ * control (and the device back button, via OverlayNav) returns to the main
+ * page. Clicking an entry opens the existing NewsDetail view on top.
+ */
+const NewsList = (function () {
+  const root = document.getElementById('newsList');
+  if (!root) return { open() {}, setData() {} };
+  const itemsEl = document.getElementById('nlItems');
+  const scroll  = document.getElementById('nlScroll');
+
+  const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  function fmtDate(d) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+    return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1] : (d || '');
+  }
+
+  let items = [], onOpenItem = null;
+
+  function render() {
+    itemsEl.innerHTML = '';
+    if (!items.length) {
+      itemsEl.innerHTML = '<div class="nl-empty">Belum ada berita lainnya.</div>';
+      return;
+    }
+    items.forEach(n => {
+      const item = document.createElement('button');
+      item.className = 'nl-item';
+      item.innerHTML =
+        `<span class="nl-item-date">${esc(fmtDate(n.date))}</span>` +
+        `<span class="nl-item-title">${esc(n.title)}</span>`;
+      item.addEventListener('click', () => { if (onOpenItem) onOpenItem(n); });
+      itemsEl.appendChild(item);
+    });
+  }
+
+  function open() {
+    render();
+    scroll.scrollTop = 0;
+    root.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => root.classList.add('open'));
+    OverlayNav.open('nl', close);
+  }
+
+  function close() {
+    root.classList.remove('open');
+    root.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.pd.open')) document.body.style.overflow = '';
+  }
+
+  function setData(allItems, openItemFn) { items = allItems || []; onOpenItem = openItemFn; }
+
+  const back = () => OverlayNav.requestClose();
+  document.getElementById('nlClose').addEventListener('click', back);
+  root.querySelectorAll('[data-nl-close]').forEach(el => el.addEventListener('click', back));
+
+  return { open, setData };
 })();
 
 /* === Floating News Rail ===
@@ -1108,6 +1292,22 @@ const NewsDetail = (function () {
       if (!r.ok) return { items: [], total: 0, hasMore: false };
       return await r.json();
     } catch { return { items: [], total: 0, hasMore: false }; }
+  }
+
+  // Fetch every post (newest-first) in large pages, then drop the newest `skip`
+  // already shown in the rail — used to populate the "Berita Lainnya" archive.
+  async function fetchOlder(skip) {
+    const out = [];
+    for (let pg = 1; ; pg++) {
+      try {
+        const r = await fetch(`/api/news?page=${pg}&limit=50`);
+        if (!r.ok) break;
+        const data = await r.json();
+        out.push(...(data.items || []));
+        if (!data.hasMore) break;
+      } catch { break; }
+    }
+    return out.slice(skip);
   }
 
   const first = await fetchPage(1);
@@ -1175,53 +1375,33 @@ const NewsDetail = (function () {
     return card;
   }
 
-  // Newest first (the API sorts by date desc), fetched one page at a time.
+  // The rail shows only the newest page; any older posts live behind the
+  // "Berita Lainnya" button, which opens a fullscreen archive (NewsList).
   const total = first.total || first.items.length;
-  let nextPage = 1;          // page just rendered
-  let shown    = 0;
-  let hasMore  = !!first.hasMore;
-  let loading  = false;
-
-  const moreBtn = document.createElement('button');
-  moreBtn.type = 'button';
-  moreBtn.className = 'news-rail-more';
-  moreBtn.hidden = true;
-
-  function renderBatch(items) {
-    // Insert the batch before the button so it always stays last.
-    items.forEach(n => list.insertBefore(makeCard(n), moreBtn));
-    shown += items.length;
-  }
-
-  function updateMoreBtn() {
-    const remaining = total - shown;
-    if (hasMore && remaining > 0) {
-      moreBtn.hidden = false;
-      moreBtn.disabled = false;
-      moreBtn.textContent = `Muat ${Math.min(NEWS_BATCH, remaining)} berita lagi`;
-    } else {
-      moreBtn.hidden = true;
-    }
-  }
-
-  async function showMore() {
-    if (loading || !hasMore) return;
-    loading = true;
-    moreBtn.disabled = true;
-    moreBtn.textContent = 'Memuat…';
-    const data = await fetchPage(nextPage + 1);
-    nextPage += 1;
-    hasMore = !!data.hasMore;
-    renderBatch(data.items || []);
-    updateMoreBtn();
-    loading = false;
-  }
-
-  moreBtn.addEventListener('click', showMore);
-  list.appendChild(moreBtn);
-  renderBatch(first.items);   // page 1, already fetched
-  updateMoreBtn();
+  first.items.forEach(n => list.appendChild(makeCard(n)));
   countB.textContent = total;
+
+  const olderCount = Math.max(0, total - first.items.length);
+  if (olderCount > 0) {
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'news-rail-more';
+    moreBtn.textContent = 'Berita Lainnya';
+    list.appendChild(moreBtn);
+
+    let olderItems = null; // fetched lazily on first open, then cached
+    moreBtn.addEventListener('click', async () => {
+      if (!olderItems) {
+        moreBtn.disabled = true;
+        moreBtn.textContent = 'Memuat…';
+        olderItems = await fetchOlder(first.items.length);
+        moreBtn.disabled = false;
+        moreBtn.textContent = 'Berita Lainnya';
+      }
+      NewsList.setData(olderItems, n => NewsDetail.open(n));
+      NewsList.open();
+    });
+  }
 
   let touched = false;
   const openRail  = () => { rail.classList.add('open');  toggle.setAttribute('aria-expanded', 'true'); };
@@ -1242,14 +1422,64 @@ const NewsDetail = (function () {
   }
 })();
 
-/* === FAQ === */
-(function initFAQ() {
-  document.querySelectorAll('.faq-item').forEach(item => {
+/* === FAQ (loaded from /api/faq, managed in the back office) ===
+ * Answers are plain text: blank lines split paragraphs, "- "/"* " lines become
+ * a bullet list, and "1." / "1)" lines a numbered list. Everything is escaped,
+ * so admin-entered text can't inject markup.
+ */
+(async function initFAQ() {
+  const list = document.getElementById('faqList');
+  if (!list) return;
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const isUL = l => /^\s*[-*•]\s+/.test(l);
+  const isOL = l => /^\s*\d+[.)]\s+/.test(l);
+
+  function renderAnswer(text) {
+    const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+    let html = '', i = 0;
+    while (i < lines.length) {
+      if (!lines[i].trim()) { i++; continue; }
+      if (isUL(lines[i])) {
+        html += '<ul>';
+        while (i < lines.length && isUL(lines[i])) { html += '<li>' + esc(lines[i].replace(/^\s*[-*•]\s+/, '')) + '</li>'; i++; }
+        html += '</ul>';
+      } else if (isOL(lines[i])) {
+        html += '<ol>';
+        while (i < lines.length && isOL(lines[i])) { html += '<li>' + esc(lines[i].replace(/^\s*\d+[.)]\s+/, '')) + '</li>'; i++; }
+        html += '</ol>';
+      } else {
+        const para = [];
+        while (i < lines.length && lines[i].trim() && !isUL(lines[i]) && !isOL(lines[i])) { para.push(esc(lines[i])); i++; }
+        html += '<p>' + para.join('<br>') + '</p>';
+      }
+    }
+    return html;
+  }
+
+  let faqs = [];
+  try {
+    const r = await fetch('/api/faq');
+    if (r.ok) faqs = await r.json();
+  } catch {}
+
+  list.innerHTML = '';
+  faqs.forEach((f, idx) => {
+    const item = document.createElement('div');
+    item.className = 'faq-item';
+    item.innerHTML =
+      `<button class="faq-question">` +
+        `<span class="faq-num">${String(idx + 1).padStart(2, '0')}</span>` +
+        `<span class="faq-q-text">${esc(f.question)}</span>` +
+        `<span class="faq-icon">+</span>` +
+      `</button>` +
+      `<div class="faq-body"><div class="faq-body-inner"><div class="faq-answer">${renderAnswer(f.answer)}</div></div></div>`;
     item.querySelector('.faq-question').addEventListener('click', () => {
       const isOpen = item.classList.contains('open');
-      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+      list.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
       if (!isOpen) item.classList.add('open');
     });
+    list.appendChild(item);
   });
 })();
 

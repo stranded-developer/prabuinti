@@ -731,6 +731,45 @@
       transition: background 150ms var(--ease);
     }
     .proj-img-del:hover { background: var(--red, #c0392b); }
+    .proj-img-order {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 22px;
+      text-align: center;
+      z-index: 2;
+    }
+    .proj-img-moves {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      display: flex;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 150ms var(--ease);
+    }
+    .proj-img:hover .proj-img-moves { opacity: 1; }
+    .proj-img-move {
+      flex: 1;
+      height: 26px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 150ms var(--ease);
+    }
+    .proj-img-move:hover:not(:disabled) { background: var(--accent); }
+    .proj-img-move:disabled { opacity: 0.35; cursor: default; }
     .proj-img-add {
       aspect-ratio: 4/3;
       border: 2px dashed var(--border);
@@ -926,7 +965,9 @@
         <button class="admin-tab"        data-tab="tabProducts">📦 Produk</button>
         <button class="admin-tab"        data-tab="tabProjects">🏗️ Proyek</button>
         <button class="admin-tab"        data-tab="tabNews">📰 Berita</button>
+        <button class="admin-tab"        data-tab="tabFaq">❓ FAQ</button>
         <button class="admin-tab"        data-tab="tabDocuments">📄 Dokumen</button>
+        <button class="admin-tab"        data-tab="tabKontak">👥 Kontak</button>
       </div>
 
       <!-- Beranda Tab -->
@@ -986,16 +1027,19 @@
           </button>
         </div>
 
-        <!-- Category manager -->
+        <!-- Category manager (collapsible) -->
         <div id="catManager" style="background:var(--bg-card,#fff);border:1.5px solid var(--border,#e5e2db);border-radius:12px;padding:16px 18px;margin-bottom:22px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+          <div id="catManagerHead" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;user-select:none;">
             <strong style="font-size:14px;">🏷️ Kategori Produk</strong>
-            <span style="font-size:12px;color:var(--text-3,#9e9e9e);">Seret urutan dengan tombol ↑↓ · ubah nama akan ikut mengubah produk terkait</span>
+            <span style="flex:1;text-align:right;font-size:12px;color:var(--text-3,#9e9e9e);">Seret urutan dengan tombol ↑↓ · ubah nama akan ikut mengubah produk terkait</span>
+            <span id="catMgrChevron" style="font-size:13px;color:var(--text-3,#9e9e9e);transition:transform 200ms ease;">▾</span>
           </div>
-          <div id="catList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-          <div style="display:flex;gap:8px;">
-            <input id="newCatName" type="text" placeholder="Nama kategori baru..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border,#e5e2db);border-radius:8px;font:inherit;">
-            <button id="addCatBtn" class="btn-sm btn-green" style="padding:8px 16px;font-size:13px;white-space:nowrap;">+ Tambah</button>
+          <div id="catManagerBody" style="margin-top:12px;">
+            <div id="catList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;">
+              <input id="newCatName" type="text" placeholder="Nama kategori baru..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border,#e5e2db);border-radius:8px;font:inherit;">
+              <button id="addCatBtn" class="btn-sm btn-green" style="padding:8px 16px;font-size:13px;white-space:nowrap;">+ Tambah</button>
+            </div>
           </div>
         </div>
 
@@ -1033,6 +1077,20 @@
         <div id="newsList"></div>
       </div>
 
+      <!-- FAQ Tab -->
+      <div class="tab-panel" id="tabFaq">
+        <div class="admin-top">
+          <div>
+            <h1>Kelola FAQ</h1>
+            <p id="faqSubtitle">Pertanyaan yang sering diajukan di halaman utama.</p>
+          </div>
+          <button id="addFaqBtn" class="btn-sm btn-green" style="padding:10px 20px;font-size:14px;">
+            + Tambah FAQ
+          </button>
+        </div>
+        <div id="faqAdminList"></div>
+      </div>
+
       <!-- Documents Tab -->
       <div class="tab-panel" id="tabDocuments">
         <div class="admin-top">
@@ -1052,13 +1110,17 @@
           <div class="pdf-upload-area" id="pdfUploadArea" role="button" tabindex="0">
             <div style="font-size:28px;">📄</div>
             <div class="pdf-upload-text" id="pdfUploadText">Klik untuk pilih file PDF</div>
-            <div class="pdf-upload-sub">Maks. 50MB</div>
+            <div class="pdf-upload-sub">Maks. 100MB</div>
           </div>
           <input type="file" id="pdfFileInput" accept="application/pdf">
 
           <div class="form-group">
             <label class="form-label" for="docTitle">Judul Dokumen</label>
             <input type="text" id="docTitle" placeholder="Mis. Surat Kerja Sama">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="docCategory">Kategori</label>
+            <select id="docCategory" class="form-input" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font:inherit;background:var(--card);color:var(--text);"></select>
           </div>
           <div class="form-group">
             <label class="form-label" for="docDesc">Keterangan (opsional)</label>
@@ -1072,7 +1134,49 @@
           </div>
         </div>
 
+        <!-- Document category manager (collapsible) -->
+        <div id="docCatManager" style="background:var(--bg-card,#fff);border:1.5px solid var(--border,#e5e2db);border-radius:12px;padding:16px 18px;margin-bottom:18px;">
+          <div id="docCatManagerHead" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;user-select:none;">
+            <strong style="font-size:14px;">🏷️ Kategori Dokumen</strong>
+            <span style="flex:1;text-align:right;font-size:12px;color:var(--text-3,#9e9e9e);">Seret urutan dengan tombol ↑↓ · ubah nama akan ikut mengubah dokumen terkait</span>
+            <span id="docCatMgrChevron" style="font-size:13px;color:var(--text-3,#9e9e9e);transition:transform 200ms ease;">▾</span>
+          </div>
+          <div id="docCatManagerBody" style="margin-top:12px;">
+            <div id="docCatList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;">
+              <input id="newDocCatName" type="text" placeholder="Nama kategori baru..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border,#e5e2db);border-radius:8px;font:inherit;">
+              <button id="addDocCatBtn" class="btn-sm btn-green" style="padding:8px 16px;font-size:13px;white-space:nowrap;">+ Tambah</button>
+            </div>
+          </div>
+        </div>
+
+        <input type="search" id="docSearch" class="admin-search" placeholder="🔍 Cari dokumen (judul, keterangan)...">
+        <div class="cat-filter" id="docAdminCatFilter" style="margin-bottom:16px;">
+          <button class="cat-toggle" id="docAdminCatToggle" type="button" aria-expanded="true" style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:var(--text-2);background:var(--bg);border:1px solid var(--border);margin-bottom:10px;cursor:pointer;">
+            <span>Kategori</span>
+            <span class="cat-toggle-chevron" style="transition:transform 200ms ease;">▾</span>
+          </button>
+          <div id="docAdminCategories" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+
         <div class="doc-admin-list" id="docAdminList">
+          <p style="color:var(--text-3);font-size:14px;">Memuat...</p>
+        </div>
+      </div>
+
+      <!-- Kontak Tab -->
+      <div class="tab-panel" id="tabKontak">
+        <div class="admin-top">
+          <div>
+            <h1>Kontak Terverifikasi</h1>
+            <p id="usersSubtitle">Memuat kontak...</p>
+          </div>
+        </div>
+        <div style="margin-bottom:16px;max-width:380px;">
+          <input type="text" id="userSearch" placeholder="🔍 Cari nama atau nomor HP..."
+            style="width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);font-size:14px;color:var(--text);">
+        </div>
+        <div id="usersList">
           <p style="color:var(--text-3);font-size:14px;">Memuat...</p>
         </div>
       </div>
@@ -1348,6 +1452,20 @@
 
     document.getElementById('addCatBtn').addEventListener('click', addCategory);
     document.getElementById('newCatName').addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); });
+
+    // Collapsible category manager: clicking the header hides/shows the body.
+    function wireManagerCollapse(headId, bodyId, chevronId) {
+      const head = document.getElementById(headId);
+      const body = document.getElementById(bodyId);
+      const chev = document.getElementById(chevronId);
+      if (!head || !body) return;
+      head.addEventListener('click', () => {
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : '';
+        if (chev) chev.style.transform = open ? 'rotate(-90deg)' : '';
+      });
+    }
+    wireManagerCollapse('catManagerHead', 'catManagerBody', 'catMgrChevron');
 
     function renderGrid(products) {
       const grid = document.getElementById('productGrid');
@@ -1683,6 +1801,13 @@
       fileInput.multiple = true;
       fileInput.style.display = 'none';
 
+      function moveImg(from, to) {
+        if (to < 0 || to >= state.images.length) return;
+        const [m] = state.images.splice(from, 1);
+        state.images.splice(to, 0, m);
+        renderImgs();
+      }
+
       function renderImgs() {
         imgsWrap.innerHTML = '';
         state.images.forEach((src, idx) => {
@@ -1690,14 +1815,39 @@
           cell.className = 'proj-img';
           const im = document.createElement('img');
           im.src = src; im.alt = '';
+
+          // Order badge — the number shown is the display order on the website.
+          const ord = document.createElement('span');
+          ord.className = 'proj-img-order';
+          ord.textContent = idx + 1;
+
           const del = document.createElement('button');
           del.className = 'proj-img-del';
           del.type = 'button';
           del.textContent = '×';
           del.title = 'Hapus foto';
           del.addEventListener('click', () => { state.images.splice(idx, 1); renderImgs(); });
+
+          // Reorder controls (←/→) so the admin sets the on-site display order.
+          const moves = document.createElement('div');
+          moves.className = 'proj-img-moves';
+          const left = document.createElement('button');
+          left.type = 'button'; left.className = 'proj-img-move';
+          left.innerHTML = '←'; left.title = 'Pindah ke kiri';
+          left.disabled = idx === 0;
+          left.addEventListener('click', () => moveImg(idx, idx - 1));
+          const right = document.createElement('button');
+          right.type = 'button'; right.className = 'proj-img-move';
+          right.innerHTML = '→'; right.title = 'Pindah ke kanan';
+          right.disabled = idx === state.images.length - 1;
+          right.addEventListener('click', () => moveImg(idx, idx + 1));
+          moves.appendChild(left);
+          moves.appendChild(right);
+
           cell.appendChild(im);
+          cell.appendChild(ord);
           cell.appendChild(del);
+          cell.appendChild(moves);
           imgsWrap.appendChild(cell);
         });
         const add = document.createElement('div');
@@ -2287,6 +2437,177 @@
       } catch { showToast('Tidak dapat terhubung', 'error'); }
     });
 
+    // === FAQ ===
+    let adminFaq = [];
+
+    async function loadFaqAdmin() {
+      const list = document.getElementById('faqAdminList');
+      list.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat FAQ...</p>';
+      try {
+        const r = await fetch('/api/faq');
+        adminFaq = r.ok ? await r.json() : [];
+      } catch { adminFaq = []; }
+      renderFaqAdmin();
+    }
+
+    function renderFaqAdmin() {
+      const list = document.getElementById('faqAdminList');
+      document.getElementById('faqSubtitle').textContent = adminFaq.length + ' pertanyaan terdaftar';
+      list.innerHTML = '';
+      if (!adminFaq.length) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:60px 0;color:var(--text-3);">
+            <div style="font-size:32px;margin-bottom:12px;">❓</div>
+            <p style="font-size:14px;font-weight:600;">Belum ada FAQ.</p>
+            <p style="font-size:13px;margin-top:4px;">Klik <strong>"+ Tambah FAQ"</strong> di atas.</p>
+          </div>`;
+        return;
+      }
+      adminFaq.forEach((f, i) => list.appendChild(makeFaqCard(f, i)));
+    }
+
+    function faqMkBtn(label, fn, disabled) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn-sm';
+      b.style.cssText = 'padding:9px 14px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;' + (disabled ? 'opacity:.4;pointer-events:none;' : '');
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      return b;
+    }
+
+    function makeFaqCard(faq, index) {
+      const state = { id: faq.id, question: faq.question || '', answer: faq.answer || '' };
+
+      const card = document.createElement('div');
+      card.className = 'proj-card';
+      card.dataset.id = faq.id;
+
+      const top = document.createElement('div');
+      top.className = 'proj-card-top';
+      top.innerHTML = `
+        <div class="form-group"><label class="form-label">Pertanyaan</label><input type="text" data-f="question" placeholder="Mis. Bagaimana cara memesan produk?"></div>
+        <div class="form-group"><label class="form-label">Jawaban</label><textarea data-f="answer" rows="7" placeholder="Tulis jawaban di sini.&#10;&#10;• Baris kosong memisahkan paragraf.&#10;• Awali baris dengan &quot;- &quot; untuk poin.&#10;• Awali baris dengan &quot;1.&quot; untuk daftar bernomor." style="resize:vertical;line-height:1.6;"></textarea></div>`;
+      const qInput = top.querySelector('[data-f="question"]');
+      const aInput = top.querySelector('[data-f="answer"]');
+      qInput.value = state.question;
+      aInput.value = state.answer;
+
+      const actions = document.createElement('div');
+      actions.className = 'proj-card-actions';
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button'; saveBtn.className = 'btn-sm btn-green';
+      saveBtn.style.cssText = 'padding:9px 18px;font-size:13px;';
+      saveBtn.textContent = '💾 Simpan';
+      saveBtn.addEventListener('click', () => saveFaq(state, saveBtn));
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button'; delBtn.className = 'btn-sm';
+      delBtn.style.cssText = 'padding:9px 18px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      delBtn.textContent = '🗑️ Hapus';
+      delBtn.addEventListener('click', () => deleteFaq(state.id));
+      actions.appendChild(faqMkBtn('↑ Naikkan', () => moveFaq(index, index - 1), index === 0));
+      actions.appendChild(faqMkBtn('↓ Turunkan', () => moveFaq(index, index + 1), index === adminFaq.length - 1));
+      actions.appendChild(saveBtn);
+      actions.appendChild(delBtn);
+
+      // Collapsible header (compact summary) + body (the edit form)
+      const header = document.createElement('div');
+      header.className = 'proj-card-header';
+      const hThumb = document.createElement('div');
+      hThumb.className = 'pch-thumb';
+      hThumb.textContent = '❓';
+      const hInfo = document.createElement('div');
+      hInfo.className = 'pch-info';
+      hInfo.innerHTML = '<div class="pch-title"></div><div class="pch-meta"></div>';
+      header.appendChild(hThumb);
+      header.appendChild(hInfo);
+      header.insertAdjacentHTML('beforeend',
+        '<svg class="pch-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+      const hTitle = hInfo.querySelector('.pch-title');
+      const hMeta  = hInfo.querySelector('.pch-meta');
+      function updateHeader() {
+        hTitle.textContent = state.question || 'Pertanyaan tanpa judul';
+        hMeta.textContent  = (state.answer || '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'Belum ada jawaban';
+      }
+      qInput.addEventListener('input', () => { state.question = qInput.value; updateHeader(); });
+      aInput.addEventListener('input', () => { state.answer = aInput.value; updateHeader(); });
+      header.addEventListener('click', () => card.classList.toggle('collapsed'));
+
+      const body = document.createElement('div');
+      body.className = 'proj-card-body';
+      body.appendChild(top);
+      body.appendChild(actions);
+
+      card.classList.add('collapsed');
+      card.appendChild(header);
+      card.appendChild(body);
+      updateHeader();
+      return card;
+    }
+
+    async function moveFaq(from, to) {
+      if (to < 0 || to >= adminFaq.length) return;
+      const arr = adminFaq.slice();
+      const [m] = arr.splice(from, 1);
+      arr.splice(to, 0, m);
+      adminFaq = arr;
+      renderFaqAdmin();
+      try {
+        await fetch('/api/faq', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ ids: arr.map(f => f.id) }),
+        });
+      } catch { showToast('Gagal menyimpan urutan', 'error'); }
+    }
+
+    async function saveFaq(state, btn) {
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Menyimpan...';
+      try {
+        const r = await fetch('/api/faq/' + state.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ question: state.question, answer: state.answer }),
+        });
+        if (r.ok) {
+          const updated = await r.json();
+          const i = adminFaq.findIndex(f => f.id === state.id);
+          if (i !== -1) adminFaq[i] = updated;
+          showToast('FAQ disimpan ✓', 'success');
+        } else showToast('Gagal menyimpan FAQ', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+      btn.disabled = false; btn.textContent = orig;
+    }
+
+    async function deleteFaq(id) {
+      if (!confirm('Hapus FAQ ini? Tindakan ini tidak bisa dibatalkan.')) return;
+      try {
+        const r = await fetch('/api/faq/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) {
+          adminFaq = adminFaq.filter(f => f.id !== id);
+          renderFaqAdmin();
+          showToast('FAQ dihapus', 'success');
+        } else showToast('Gagal menghapus FAQ', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    document.getElementById('addFaqBtn').addEventListener('click', async () => {
+      try {
+        const r = await fetch('/api/faq', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ question: '', answer: '' }),
+        });
+        if (r.ok) {
+          const f = await r.json();
+          adminFaq.push(f);
+          renderFaqAdmin();
+          expandCard('faqAdminList', f.id);
+          showToast('FAQ baru dibuat ✓', 'success');
+        } else showToast('Gagal membuat FAQ', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    });
+
     // === Tabs ===
     document.querySelectorAll('.admin-tab').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -2295,61 +2616,329 @@
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'tabDocuments') loadDocs();
+        if (btn.dataset.tab === 'tabKontak')    loadUsers();
         if (btn.dataset.tab === 'tabProducts')  { loadProducts(); loadCategories(); }
         if (btn.dataset.tab === 'tabProjects')  loadProjectsAdmin();
         if (btn.dataset.tab === 'tabNews')      loadNewsAdmin();
+        if (btn.dataset.tab === 'tabFaq')       loadFaqAdmin();
         if (btn.dataset.tab === 'tabBeranda')   loadHomepage();
       });
     });
 
+    // === Kontak (verified phone numbers) ===
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    let allUsers = [];
+
+    async function loadUsers() {
+      const wrap = document.getElementById('usersList');
+      wrap.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat...</p>';
+      try {
+        const r = await fetch('/api/users', { headers: { Authorization: 'Bearer ' + token } });
+        if (!r.ok) throw new Error();
+        allUsers = await r.json();
+        document.getElementById('usersSubtitle').textContent =
+          allUsers.length + ' kontak terverifikasi';
+        renderUsers();
+      } catch {
+        wrap.innerHTML = '<p style="color:var(--red);font-size:14px;">Gagal memuat kontak.</p>';
+      }
+    }
+
+    function renderUsers() {
+      const wrap = document.getElementById('usersList');
+      const q = (document.getElementById('userSearch').value || '').trim().toLowerCase();
+      const rows = allUsers.filter(u =>
+        !q || (u.name || '').toLowerCase().includes(q) || (u.phone || '').toLowerCase().includes(q));
+
+      if (!rows.length) {
+        wrap.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-3);">
+          <div style="font-size:28px;margin-bottom:10px;">👥</div>
+          <p style="font-size:14px;font-weight:600;">${allUsers.length ? 'Tidak ada hasil yang cocok.' : 'Belum ada kontak terverifikasi.'}</p>
+        </div>`;
+        return;
+      }
+
+      const fmt = s => {
+        if (!s) return '-';
+        const d = new Date(s);
+        return isNaN(d) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+      };
+      const srcLabel = s => s === 'download' ? 'Unduh dokumen' : s === 'comment' ? 'Komentar' : '-';
+
+      wrap.innerHTML = `
+        <div style="overflow-x:auto;border:1.5px solid var(--border);border-radius:12px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead>
+            <tr style="background:var(--bg);text-align:left;">
+              <th style="padding:12px 14px;font-weight:700;color:var(--text-2);">Nama</th>
+              <th style="padding:12px 14px;font-weight:700;color:var(--text-2);">Nomor HP</th>
+              <th style="padding:12px 14px;font-weight:700;color:var(--text-2);">Sumber</th>
+              <th style="padding:12px 14px;font-weight:700;color:var(--text-2);">Terakhir verifikasi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(u => `
+              <tr style="border-top:1px solid var(--border);">
+                <td style="padding:11px 14px;color:var(--text);">${u.name ? escHtml(u.name) : '<span style="color:var(--text-3);">(tanpa nama)</span>'}</td>
+                <td style="padding:11px 14px;"><a href="https://wa.me/${escHtml(u.phone)}" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none;">${escHtml(u.phone)}</a></td>
+                <td style="padding:11px 14px;color:var(--text-2);">${srcLabel(u.source)}</td>
+                <td style="padding:11px 14px;color:var(--text-2);white-space:nowrap;">${fmt(u.lastVerifiedAt || u.createdAt)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>`;
+    }
+
+    document.getElementById('userSearch').addEventListener('input', renderUsers);
+
     // === Documents ===
     let selectedPdfFile = null;
+
+    // === Document categories (mirror product categories) ===
+    let docCategoriesState = [];
+    let adminDocs = [], activeDocAdminCat = 'Semua', docSearchTerm = '';
+
+    async function loadDocCategories() {
+      try {
+        const r = await fetch('/api/doc-categories');
+        docCategoriesState = r.ok ? await r.json() : [];
+      } catch { docCategoriesState = []; }
+      renderDocCatManager();
+      populateDocCategorySelect();
+    }
+
+    function populateDocCategorySelect(selected) {
+      const sel = document.getElementById('docCategory');
+      if (!sel) return;
+      const cur = selected !== undefined ? selected : sel.value;
+      sel.innerHTML = '';
+      const blank = document.createElement('option');
+      blank.value = ''; blank.textContent = '— Tanpa kategori —';
+      sel.appendChild(blank);
+      const names = docCategoriesState.map(c => c.name);
+      if (cur && !names.includes(cur)) names.unshift(cur);
+      names.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+      sel.value = cur || '';
+    }
+
+    function renderDocCatManager() {
+      const list = document.getElementById('docCatList');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!docCategoriesState.length) {
+        list.innerHTML = '<p style="font-size:13px;color:var(--text-3,#9e9e9e);">Belum ada kategori.</p>';
+        return;
+      }
+      docCategoriesState.forEach((c, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--bg,#f8f6f2);border:1px solid var(--border,#e5e2db);border-radius:8px;padding:6px 10px;';
+        const name = document.createElement('span');
+        name.textContent = c.name;
+        name.style.cssText = 'flex:1;font-size:14px;font-weight:600;';
+        const mk = (label, title, fn, disabled) => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.textContent = label; b.title = title;
+          b.style.cssText = 'padding:4px 9px;font-size:13px;border:1px solid var(--border,#e5e2db);background:#fff;border-radius:6px;cursor:pointer;' + (disabled ? 'opacity:.35;pointer-events:none;' : '');
+          b.addEventListener('click', fn);
+          return b;
+        };
+        row.appendChild(name);
+        row.appendChild(mk('↑', 'Naikkan', () => reorderDocCategory(i, i - 1), i === 0));
+        row.appendChild(mk('↓', 'Turunkan', () => reorderDocCategory(i, i + 1), i === docCategoriesState.length - 1));
+        row.appendChild(mk('✏️', 'Ubah nama', () => renameDocCategory(c)));
+        row.appendChild(mk('🗑️', 'Hapus', () => deleteDocCategory(c)));
+        list.appendChild(row);
+      });
+    }
+
+    async function reorderDocCategory(from, to) {
+      if (to < 0 || to >= docCategoriesState.length) return;
+      const arr = docCategoriesState.slice();
+      const [m] = arr.splice(from, 1); arr.splice(to, 0, m);
+      docCategoriesState = arr;
+      renderDocCatManager();
+      try {
+        await fetch('/api/doc-categories', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ ids: arr.map(c => c.id) }) });
+        buildDocAdminCategories();
+      } catch { showToast('Gagal menyimpan urutan', 'error'); }
+    }
+
+    async function addDocCategory() {
+      const input = document.getElementById('newDocCatName');
+      const name = input.value.trim();
+      if (!name) return;
+      try {
+        const r = await fetch('/api/doc-categories', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ name }) });
+        if (r.ok) { input.value = ''; showToast('Kategori ditambahkan ✓', 'success'); await loadDocCategories(); buildDocAdminCategories(); }
+        else { const d = await r.json().catch(() => ({})); showToast(d.error || 'Gagal menambah kategori', 'error'); }
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    async function renameDocCategory(c) {
+      const name = prompt('Ubah nama kategori:', c.name);
+      if (name === null) return;
+      const trimmed = name.trim();
+      if (!trimmed || trimmed === c.name) return;
+      try {
+        const r = await fetch('/api/doc-categories/' + c.id, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ name: trimmed }) });
+        if (r.ok) { showToast('Kategori diubah ✓ (dokumen terkait ikut diperbarui)', 'success'); await loadDocCategories(); loadDocs(); }
+        else { const d = await r.json().catch(() => ({})); showToast(d.error || 'Gagal mengubah kategori', 'error'); }
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    async function deleteDocCategory(c) {
+      const inUse = adminDocs.filter(d => d.category === c.name).length;
+      const msg = inUse
+        ? `Hapus kategori "${c.name}"?\n\n${inUse} dokumen memakai kategori ini — dokumen tidak terhapus, tapi kehilangan kategorinya.`
+        : `Hapus kategori "${c.name}"?`;
+      if (!confirm(msg)) return;
+      try {
+        const r = await fetch('/api/doc-categories/' + c.id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) { showToast('Kategori dihapus ✓', 'success'); await loadDocCategories(); buildDocAdminCategories(); }
+        else showToast('Gagal menghapus kategori', 'error');
+      } catch { showToast('Tidak dapat terhubung', 'error'); }
+    }
+
+    document.getElementById('addDocCatBtn').addEventListener('click', addDocCategory);
+    document.getElementById('newDocCatName').addEventListener('keydown', e => { if (e.key === 'Enter') addDocCategory(); });
+    wireManagerCollapse('docCatManagerHead', 'docCatManagerBody', 'docCatMgrChevron');
+
+    // === Doc list: search + collapsible category chip filter ===
+    function buildDocAdminCategories() {
+      const wrap = document.getElementById('docAdminCategories');
+      if (!wrap) return;
+      const names   = docCategoriesState.map(c => c.name);
+      const used    = new Set(adminDocs.map(d => d.category).filter(Boolean));
+      const ordered = names.filter(n => used.has(n));
+      const extras  = [...used].filter(n => !names.includes(n));
+      const cats    = ['Semua', ...ordered, ...extras];
+      if (!cats.includes(activeDocAdminCat)) activeDocAdminCat = 'Semua';
+      wrap.innerHTML = '';
+      cats.forEach(cat => {
+        const active = cat === activeDocAdminCat;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = cat;
+        btn.style.cssText = 'padding:6px 14px;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);' +
+          (active ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : 'background:transparent;color:var(--text-2);');
+        btn.addEventListener('click', () => { activeDocAdminCat = cat; buildDocAdminCategories(); renderDocAdminList(); });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function makeDocAdminCard(d) {
+      const card = document.createElement('div');
+      card.className = 'doc-admin-card';
+
+      const icon = document.createElement('div');
+      icon.className = 'doc-admin-icon'; icon.textContent = '📄';
+
+      const info = document.createElement('div');
+      info.className = 'doc-admin-info';
+      info.innerHTML =
+        `<div class="doc-admin-title">${escHtml(d.title)}</div>` +
+        `<div class="doc-admin-meta">PDF · ${escHtml(d.size)} · Diupload ${escHtml(d.uploadedAt)}</div>` +
+        (d.description ? `<div style="font-size:12px;color:var(--text-2);margin-top:3px;">${escHtml(d.description)}</div>` : '');
+
+      // Per-document category picker (saves immediately via PUT).
+      const catRow = document.createElement('div');
+      catRow.style.cssText = 'margin-top:7px;display:flex;align-items:center;gap:6px;';
+      const lbl = document.createElement('span');
+      lbl.textContent = 'Kategori:'; lbl.style.cssText = 'font-size:12px;color:var(--text-3);';
+      const sel = document.createElement('select');
+      sel.style.cssText = 'padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);';
+      const names = docCategoriesState.map(c => c.name);
+      const cur = d.category || '';
+      [...new Set(['', ...(cur && !names.includes(cur) ? [cur] : []), ...names])].forEach(n => {
+        const o = document.createElement('option'); o.value = n; o.textContent = n || '— Tanpa kategori —'; sel.appendChild(o);
+      });
+      sel.value = cur;
+      sel.addEventListener('change', async () => {
+        try {
+          const r = await fetch('/api/documents/' + d.id, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ category: sel.value }) });
+          if (r.ok) {
+            d.category = sel.value;
+            const i = adminDocs.findIndex(x => x.id === d.id); if (i !== -1) adminDocs[i].category = sel.value;
+            showToast('Kategori dokumen disimpan ✓', 'success');
+            buildDocAdminCategories();
+          } else showToast('Gagal menyimpan kategori', 'error');
+        } catch { showToast('Tidak dapat terhubung', 'error'); }
+      });
+      catRow.appendChild(lbl); catRow.appendChild(sel);
+      info.appendChild(catRow);
+
+      const btns = document.createElement('div');
+      btns.className = 'doc-admin-btns';
+      const dl = document.createElement('button');
+      dl.className = 'btn-dl'; dl.title = 'Download / Pratinjau'; dl.textContent = '⬇ Unduh';
+      dl.addEventListener('click', () => { window.location.href = `/api/admin/docs/${d.id}?auth=${encodeURIComponent(token)}`; });
+      const del = document.createElement('button');
+      del.className = 'btn-del-doc'; del.textContent = '🗑 Hapus';
+      del.addEventListener('click', async () => {
+        if (!confirm(`Hapus dokumen "${d.title}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+        try {
+          const res = await fetch(`/api/documents/${d.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+          if (res.ok) { showToast('Dokumen dihapus ✓', 'success'); loadDocs(); }
+          else showToast('Gagal menghapus dokumen', 'error');
+        } catch { showToast('Tidak dapat terhubung', 'error'); }
+      });
+      btns.appendChild(dl); btns.appendChild(del);
+
+      card.appendChild(icon); card.appendChild(info); card.appendChild(btns);
+      return card;
+    }
+
+    function renderDocAdminList() {
+      const list = document.getElementById('docAdminList');
+      document.getElementById('docSubtitle').textContent = adminDocs.length + ' dokumen tersedia';
+      if (!adminDocs.length) {
+        list.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-3);">
+          <div style="font-size:28px;margin-bottom:10px;">📂</div>
+          <p style="font-size:14px;font-weight:600;">Belum ada dokumen.</p>
+          <p style="font-size:13px;margin-top:4px;">Klik tombol <strong>"+ Upload Dokumen Baru"</strong> di atas.</p>
+        </div>`;
+        return;
+      }
+      const q = docSearchTerm.trim().toLowerCase();
+      let docs = activeDocAdminCat === 'Semua' ? adminDocs : adminDocs.filter(d => (d.category || '') === activeDocAdminCat);
+      if (q) docs = docs.filter(d => `${d.title || ''} ${d.description || ''}`.toLowerCase().includes(q));
+      if (!docs.length) {
+        list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada dokumen yang cocok.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      docs.forEach(d => list.appendChild(makeDocAdminCard(d)));
+    }
 
     async function loadDocs() {
       const list = document.getElementById('docAdminList');
       list.innerHTML = '<p style="color:var(--text-3);font-size:14px;">Memuat...</p>';
       try {
-        const r    = await fetch('/api/documents');
-        const docs = await r.json();
-        document.getElementById('docSubtitle').textContent = docs.length + ' dokumen tersedia';
-        if (!docs.length) {
-          list.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-3);">
-            <div style="font-size:28px;margin-bottom:10px;">📂</div>
-            <p style="font-size:14px;font-weight:600;">Belum ada dokumen.</p>
-            <p style="font-size:13px;margin-top:4px;">Klik tombol <strong>"+ Upload Dokumen Baru"</strong> di atas.</p>
-          </div>`;
-          return;
-        }
-        list.innerHTML = '';
-        docs.forEach(d => {
-          const card = document.createElement('div');
-          card.className = 'doc-admin-card';
-          card.innerHTML = `
-            <div class="doc-admin-icon">📄</div>
-            <div class="doc-admin-info">
-              <div class="doc-admin-title">${d.title}</div>
-              <div class="doc-admin-meta">PDF · ${d.size} · Diupload ${d.uploadedAt}</div>
-              ${d.description ? `<div style="font-size:12px;color:var(--text-2);margin-top:3px;">${d.description}</div>` : ''}
-            </div>
-            <div class="doc-admin-btns">
-              <button class="btn-dl" data-id="${d.id}" title="Download / Pratinjau">⬇ Unduh</button>
-              <button class="btn-del-doc" data-id="${d.id}" data-title="${d.title}">🗑 Hapus</button>
-            </div>`;
-          card.querySelector('.btn-dl').addEventListener('click', () => {
-            window.location.href = `/api/admin/docs/${d.id}?auth=${encodeURIComponent(token)}`;
-          });
-          card.querySelector('.btn-del-doc').addEventListener('click', async () => {
-            if (!confirm(`Hapus dokumen "${d.title}"? Tindakan ini tidak bisa dibatalkan.`)) return;
-            try {
-              const res = await fetch(`/api/documents/${d.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
-              if (res.ok) { showToast('Dokumen dihapus ✓', 'success'); loadDocs(); }
-              else showToast('Gagal menghapus dokumen', 'error');
-            } catch { showToast('Tidak dapat terhubung', 'error'); }
-          });
-          list.appendChild(card);
-        });
+        if (!docCategoriesState.length) await loadDocCategories();
+        const r = await fetch('/api/documents');
+        adminDocs = await r.json();
+        buildDocAdminCategories();
+        renderDocAdminList();
       } catch { list.innerHTML = '<p style="color:var(--red);">Gagal memuat dokumen.</p>'; }
     }
+
+    document.getElementById('docSearch').addEventListener('input', e => { docSearchTerm = e.target.value; renderDocAdminList(); });
+    (function wireDocAdminCatToggle() {
+      const t = document.getElementById('docAdminCatToggle');
+      const f = document.getElementById('docAdminCatFilter');
+      const chev = t.querySelector('.cat-toggle-chevron');
+      const chips = document.getElementById('docAdminCategories');
+      t.addEventListener('click', () => {
+        const collapsed = f.classList.toggle('collapsed');
+        chips.style.display = collapsed ? 'none' : 'flex';
+        if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
+        t.setAttribute('aria-expanded', String(!collapsed));
+      });
+    })();
 
     // PDF upload area
     const pdfArea = document.getElementById('pdfUploadArea');
@@ -2374,6 +2963,7 @@
       pdfArea.classList.remove('has-file');
       document.getElementById('docTitle').value = '';
       document.getElementById('docDesc').value = '';
+      populateDocCategorySelect('');
       document.getElementById('docUploadForm').style.display = 'block';
       document.getElementById('addDocBtn').style.display = 'none';
       document.getElementById('docTitle').focus();
@@ -2384,32 +2974,74 @@
       document.getElementById('addDocBtn').style.display = 'inline-flex';
     });
 
+    // Reads an error message from a failed response, tolerating non-JSON
+    // bodies (e.g. the platform's 413 page when a body exceeds the limit).
+    async function errMsg(res, fallback) {
+      try { const d = await res.json(); if (d && d.error) return d.error; } catch {}
+      if (res.status === 413) return 'File terlalu besar untuk diupload.';
+      return fallback + ' (HTTP ' + res.status + ')';
+    }
+
+    const MAX_DOC_BYTES = 100 * 1024 * 1024; // matches server multer limit
+
     document.getElementById('docSaveBtn').addEventListener('click', async () => {
       const title = document.getElementById('docTitle').value.trim();
       const desc  = document.getElementById('docDesc').value.trim();
+      const category = document.getElementById('docCategory').value;
       if (!title) { showToast('Judul dokumen wajib diisi', 'error'); document.getElementById('docTitle').focus(); return; }
       if (!selectedPdfFile) { showToast('Pilih file PDF terlebih dahulu', 'error'); return; }
+      if (selectedPdfFile.size > MAX_DOC_BYTES) {
+        showToast('File terlalu besar. Maksimal 100MB.', 'error');
+        return;
+      }
 
       const btn = document.getElementById('docSaveBtn');
       btn.disabled = true;
       btn.textContent = 'Mengupload...';
+      const auth = { Authorization: 'Bearer ' + token };
 
       try {
-        const fd = new FormData();
-        fd.append('file', selectedPdfFile);
-        fd.append('title', title);
-        fd.append('description', desc);
-        const res  = await fetch('/api/documents', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+        // Ask the server how to upload: 'signed' = direct-to-storage (prod,
+        // bypasses the 4.5MB function limit); 'direct' = multipart (dev).
+        const initRes = await fetch('/api/documents/init', {
+          method: 'POST',
+          headers: { ...auth, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        if (!initRes.ok) throw new Error(await errMsg(initRes, 'Gagal memulai upload'));
+        const init = await initRes.json();
+
+        let res;
+        if (init.mode === 'signed') {
+          const put = await fetch(init.uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/pdf' },
+            body: selectedPdfFile,
+          });
+          if (!put.ok) throw new Error('Gagal mengunggah file ke penyimpanan (HTTP ' + put.status + ')');
+          res = await fetch('/api/documents/finalize', {
+            method: 'POST',
+            headers: { ...auth, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ objectPath: init.objectPath, title, description: desc, category }),
+          });
+        } else {
+          const fd = new FormData();
+          fd.append('file', selectedPdfFile);
+          fd.append('title', title);
+          fd.append('description', desc);
+          fd.append('category', category);
+          res = await fetch('/api/documents', { method: 'POST', headers: auth, body: fd });
+        }
+
         if (res.ok) {
           showToast('Dokumen berhasil disimpan ✓', 'success');
           document.getElementById('docUploadForm').style.display = 'none';
           document.getElementById('addDocBtn').style.display = 'inline-flex';
           loadDocs();
         } else {
-          const d = await res.json();
-          showToast(d.error || 'Gagal menyimpan dokumen', 'error');
+          showToast(await errMsg(res, 'Gagal menyimpan dokumen'), 'error');
         }
-      } catch { showToast('Tidak dapat terhubung ke server', 'error'); }
+      } catch (e) { showToast(e.message || 'Tidak dapat terhubung ke server', 'error'); }
 
       btn.disabled = false;
       btn.textContent = 'Simpan Dokumen';

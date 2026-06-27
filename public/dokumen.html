@@ -334,6 +334,17 @@
         <h1 class="section-title">Dokumen</h1>
         <p class="section-desc">Unduh dokumen resmi kami. Verifikasi nomor WhatsApp diperlukan untuk setiap unduhan.</p>
       </div>
+      <div class="catalog-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="search" id="docSearch" placeholder="Cari dokumen..." autocomplete="off">
+      </div>
+      <div class="cat-filter" id="docsCatFilter">
+        <button class="cat-toggle" id="docsCatToggle" type="button" aria-expanded="true">
+          <span>Kategori</span>
+          <svg class="cat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="docCategories" class="categories"></div>
+      </div>
       <div class="doc-list" id="docList">
         <div class="doc-empty">
           <div class="doc-empty-icon">📄</div>
@@ -439,48 +450,103 @@
     const io = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } }), { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-    // --- Load Documents ---
+    // --- Load Documents (with category filter + search) ---
     let currentDocId = null;
+    let allDocs = [], activeDocCat = 'Semua', docSearchTerm = '';
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+    function renderDocList() {
+      const list = document.getElementById('docList');
+      const q = docSearchTerm.trim().toLowerCase();
+      let docs = activeDocCat === 'Semua' ? allDocs : allDocs.filter(d => (d.category || '') === activeDocCat);
+      if (q) docs = docs.filter(d => `${d.title || ''} ${d.description || ''}`.toLowerCase().includes(q));
+      if (!docs.length) {
+        list.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">🔍</div><p>Tidak ada dokumen yang cocok.</p></div>`;
+        return;
+      }
+      list.innerHTML = '';
+      docs.forEach((doc, i) => {
+        const num = String(i + 1).padStart(2, '0');
+        const card = document.createElement('div');
+        card.className = 'doc-card reveal';
+        card.innerHTML = `
+          <div class="doc-num">${num}</div>
+          <div class="doc-info">
+            <div class="doc-title">${esc(doc.title)}</div>
+            ${doc.description ? `<div class="doc-desc">${esc(doc.description)}</div>` : ''}
+            <div class="doc-meta">
+              <span>PDF</span>
+              ${doc.category ? `<span>${esc(doc.category)}</span>` : ''}
+              <span>${esc(doc.size)}</span>
+              <span>Diupload ${esc(doc.uploadedAt)}</span>
+            </div>
+          </div>
+          <button class="doc-btn" data-id="${doc.id}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Unduh
+          </button>`;
+        card.querySelector('.doc-btn').addEventListener('click', () => openModal(doc.id, doc.title));
+        list.appendChild(card);
+        requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
+      });
+    }
+
+    async function buildDocCategories() {
+      const wrap = document.getElementById('docCategories');
+      let catNames = [];
+      try {
+        const r = await fetch('/api/doc-categories');
+        if (r.ok) catNames = (await r.json()).map(c => c.name);
+      } catch {}
+      const used     = new Set(allDocs.map(d => d.category).filter(Boolean));
+      const ordered  = catNames.filter(c => used.has(c));
+      const extras   = [...used].filter(c => !catNames.includes(c));
+      const cats     = ['Semua', ...ordered, ...extras];
+      wrap.innerHTML = '';
+      // Only show the filter when there's more than just "Semua".
+      document.getElementById('docsCatFilter').style.display = cats.length > 1 ? '' : 'none';
+      cats.forEach((cat, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
+        btn.textContent = cat;
+        btn.addEventListener('click', () => {
+          wrap.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeDocCat = cat;
+          renderDocList();
+        });
+        wrap.appendChild(btn);
+      });
+    }
 
     async function loadDocs() {
       const list = document.getElementById('docList');
       try {
         const res  = await fetch('/api/documents');
-        const docs = await res.json();
-        if (!docs.length) {
+        allDocs = await res.json();
+        if (!allDocs.length) {
+          document.getElementById('docsCatFilter').style.display = 'none';
           list.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">📄</div><p>Belum ada dokumen tersedia.</p></div>`;
           return;
         }
-        list.innerHTML = '';
-        docs.forEach((doc, i) => {
-          const num = String(i + 1).padStart(2, '0');
-          const card = document.createElement('div');
-          card.className = 'doc-card reveal';
-          card.innerHTML = `
-            <div class="doc-num">${num}</div>
-            <div class="doc-info">
-              <div class="doc-title">${doc.title}</div>
-              ${doc.description ? `<div class="doc-desc">${doc.description}</div>` : ''}
-              <div class="doc-meta">
-                <span>PDF</span>
-                <span>${doc.size}</span>
-                <span>Diupload ${doc.uploadedAt}</span>
-              </div>
-            </div>
-            <button class="doc-btn" data-id="${doc.id}" data-title="${doc.title}">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              Unduh
-            </button>`;
-          card.querySelector('.doc-btn').addEventListener('click', () => openModal(doc.id, doc.title));
-          list.appendChild(card);
-          requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
-        });
+        await buildDocCategories();
+        renderDocList();
       } catch {
         list.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">⚠️</div><p>Gagal memuat dokumen.</p></div>`;
       }
     }
+
+    document.getElementById('docSearch').addEventListener('input', e => { docSearchTerm = e.target.value; renderDocList(); });
+    (function wireDocsCatToggle() {
+      const toggle = document.getElementById('docsCatToggle');
+      const filter = document.getElementById('docsCatFilter');
+      toggle.addEventListener('click', () => {
+        const collapsed = filter.classList.toggle('collapsed');
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+      });
+    })();
     loadDocs();
 
     // --- Modal ---
