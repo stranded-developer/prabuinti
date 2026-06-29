@@ -1207,6 +1207,36 @@ body::before {
   transition: opacity 600ms var(--ease-out), transform 500ms var(--ease-out);
 }
 .project-card.pc-carousel img.pc-on { opacity: 1; }
+/* Small manual prev/next buttons on the project cards */
+.pc-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff;
+  opacity: 0;
+  transition: background 150ms var(--ease-out), opacity 150ms var(--ease-out);
+}
+.pc-nav svg { width: 15px; height: 15px; }
+.pc-prev { left: 7px; }
+.pc-next { right: 7px; }
+.project-card:hover .pc-nav { opacity: 1; }
+.pc-nav:hover { background: var(--accent); }
+.pc-nav:active { transform: translateY(-50%) scale(0.9); }
+/* Touch devices have no hover — keep the buttons visible, and smaller. */
+@media (hover: none), (max-width: 540px) {
+  .pc-nav { opacity: 0.85; width: 22px; height: 22px; }
+  .pc-nav svg { width: 12px; height: 12px; }
+  .pc-prev { left: 4px; }
+  .pc-next { right: 4px; }
+}
 .project-label {
   position: absolute;
   bottom: 0;
@@ -2035,7 +2065,14 @@ body::before {
   .hero-stat-value { font-size: 26px; }
 
   .products-grid { gap: 10px; }
-  .projects-grid { grid-template-columns: 1fr; }
+  .projects-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+  /* Smaller manual carousel buttons on the project detail hero */
+  .prj-cz-nav { width: 30px; height: 30px; }
+  .prj-cz-nav svg { width: 15px; height: 15px; }
+  .prj-cz-prev { left: 8px; }
+  .prj-cz-next { right: 8px; }
+  .prj-cz-dot { width: 7px; height: 7px; }
   .contact-wa-inner { padding: 28px 20px; }
 
   :root { --faq-num-col: 38px; }

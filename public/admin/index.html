@@ -2808,22 +2808,30 @@
     wireManagerCollapse('docCatManagerHead', 'docCatManagerBody', 'docCatMgrChevron');
 
     // === Doc list: search + collapsible category chip filter ===
+    function docCatCount(cat) {
+      if (cat === 'Semua')          return adminDocs.length;
+      if (cat === 'Tanpa Kategori') return adminDocs.filter(d => !d.category).length;
+      return adminDocs.filter(d => (d.category || '') === cat).length;
+    }
+
     function buildDocAdminCategories() {
       const wrap = document.getElementById('docAdminCategories');
       if (!wrap) return;
       const names   = docCategoriesState.map(c => c.name);
-      const used    = new Set(adminDocs.map(d => d.category).filter(Boolean));
-      const ordered = names.filter(n => used.has(n));
-      const extras  = [...used].filter(n => !names.includes(n));
-      const cats    = ['Semua', ...ordered, ...extras];
+      // Categories used by docs but no longer in the managed list (e.g. renamed).
+      const extras  = [...new Set(adminDocs.map(d => d.category).filter(Boolean))].filter(n => !names.includes(n));
+      const hasUncat = adminDocs.some(d => !d.category);
+      // Show every managed category (even empty ones) so you can always filter,
+      // plus an "Tanpa Kategori" bucket for documents with no category set.
+      const cats = ['Semua', ...names, ...extras, ...(hasUncat ? ['Tanpa Kategori'] : [])];
       if (!cats.includes(activeDocAdminCat)) activeDocAdminCat = 'Semua';
       wrap.innerHTML = '';
       cats.forEach(cat => {
         const active = cat === activeDocAdminCat;
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.textContent = cat;
-        btn.style.cssText = 'padding:6px 14px;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);' +
+        btn.innerHTML = `<span>${escHtml(cat)}</span><span style="opacity:.65;font-weight:700;">${docCatCount(cat)}</span>`;
+        btn.style.cssText = 'padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);display:inline-flex;gap:6px;align-items:center;' +
           (active ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : 'background:transparent;color:var(--text-2);');
         btn.addEventListener('click', () => { activeDocAdminCat = cat; buildDocAdminCategories(); renderDocAdminList(); });
         wrap.appendChild(btn);
@@ -2865,6 +2873,7 @@
             const i = adminDocs.findIndex(x => x.id === d.id); if (i !== -1) adminDocs[i].category = sel.value;
             showToast('Kategori dokumen disimpan ✓', 'success');
             buildDocAdminCategories();
+            renderDocAdminList();
           } else showToast('Gagal menyimpan kategori', 'error');
         } catch { showToast('Tidak dapat terhubung', 'error'); }
       });
@@ -2894,8 +2903,8 @@
 
     function renderDocAdminList() {
       const list = document.getElementById('docAdminList');
-      document.getElementById('docSubtitle').textContent = adminDocs.length + ' dokumen tersedia';
       if (!adminDocs.length) {
+        document.getElementById('docSubtitle').textContent = '0 dokumen tersedia';
         list.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-3);">
           <div style="font-size:28px;margin-bottom:10px;">📂</div>
           <p style="font-size:14px;font-weight:600;">Belum ada dokumen.</p>
@@ -2903,11 +2912,19 @@
         </div>`;
         return;
       }
+      let docs;
+      if (activeDocAdminCat === 'Semua')               docs = adminDocs;
+      else if (activeDocAdminCat === 'Tanpa Kategori') docs = adminDocs.filter(d => !d.category);
+      else                                             docs = adminDocs.filter(d => (d.category || '') === activeDocAdminCat);
       const q = docSearchTerm.trim().toLowerCase();
-      let docs = activeDocAdminCat === 'Semua' ? adminDocs : adminDocs.filter(d => (d.category || '') === activeDocAdminCat);
       if (q) docs = docs.filter(d => `${d.title || ''} ${d.description || ''}`.toLowerCase().includes(q));
+
+      document.getElementById('docSubtitle').textContent = activeDocAdminCat === 'Semua'
+        ? adminDocs.length + ' dokumen tersedia'
+        : `${docs.length} dari ${adminDocs.length} dokumen · ${activeDocAdminCat}`;
+
       if (!docs.length) {
-        list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada dokumen yang cocok.</p>';
+        list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-3);font-size:14px;">Tidak ada dokumen di kategori ini.</p>';
         return;
       }
       list.innerHTML = '';

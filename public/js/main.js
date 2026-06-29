@@ -662,47 +662,40 @@ async function renderProjectShowcase(portfolioFallback) {
 
   const { projects } = await Catalog.load();
 
+  const PAGE = 6; // projects rendered per "Muat Lainnya" batch
+
   if (projects.length) {
-    // Auto-rotate a card's cover through all its images while it's on screen:
-    // one image every 2s, two full loops, then settle back on the first.
-    function attachProjectAutoCarousel(card, baseImg, images) {
+    // Manual image carousel for a card: small prev/next buttons swap the cover.
+    // Images load on demand (only when navigated to), not all upfront.
+    function attachProjectCarousel(card, baseImg, images) {
       card.classList.add('pc-carousel');
       baseImg.classList.add('pc-on');
       const overlay = document.createElement('img');
       overlay.alt = baseImg.alt;
       baseImg.insertAdjacentElement('afterend', overlay);
-      images.forEach(src => { const im = new Image(); im.src = src; }); // warm the cache
 
       const layers = [baseImg, overlay];
-      let visible = 0, idx = 0, advances = 0, timer = null;
-      const MAX = images.length * 2;
-
+      let visible = 0, idx = 0;
       function goTo(i) {
+        i = (i + images.length) % images.length;
+        if (i === idx) return;
         const nxt = layers[1 - visible];
-        nxt.src = images[i];
+        nxt.src = images[i];                 // fetched on demand
         nxt.classList.add('pc-on');
         layers[visible].classList.remove('pc-on');
         visible = 1 - visible; idx = i;
       }
-      function resetToFirst() {
-        layers[0].src = images[0]; layers[0].classList.add('pc-on');
-        layers[1].classList.remove('pc-on');
-        visible = 0; idx = 0;
-      }
-      function stop() { if (timer) { clearInterval(timer); timer = null; } }
-      function start() {
-        if (timer) return;
-        advances = 0;
-        timer = setInterval(() => {
-          goTo((idx + 1) % images.length);
-          if (++advances >= MAX) { stop(); if (idx !== 0) goTo(0); }
-        }, 2000);
-      }
-
-      const io = new IntersectionObserver(entries => {
-        entries.forEach(e => { if (e.isIntersecting) start(); else { stop(); resetToFirst(); } });
-      }, { threshold: 0.5 });
-      io.observe(card);
+      const mkBtn = (cls, label, path, delta) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pc-nav ' + cls;
+        b.setAttribute('aria-label', label);
+        b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+        b.addEventListener('click', e => { e.stopPropagation(); goTo(idx + delta); });
+        return b;
+      };
+      card.appendChild(mkBtn('pc-prev', 'Sebelumnya', 'M15 18l-6-6 6-6', -1));
+      card.appendChild(mkBtn('pc-next', 'Berikutnya', 'M9 18l6-6-6-6', 1));
     }
 
     function makeProjectCard(pr) {
@@ -716,7 +709,7 @@ async function renderProjectShowcase(portfolioFallback) {
         img.setAttribute('data-lazy-src', cover);
         card.appendChild(img);
         LazyImages.observe(img);
-        if (images.length > 1) attachProjectAutoCarousel(card, img, images);
+        if (images.length > 1) attachProjectCarousel(card, img, images);
       } else {
         card.innerHTML = `<div class="portfolio-placeholder"><span>${pr.title || 'Proyek'}</span></div>`;
       }
@@ -729,11 +722,41 @@ async function renderProjectShowcase(portfolioFallback) {
       return card;
     }
 
-    function renderList(list) {
-      grid.innerHTML = '';
-      list.forEach(pr => grid.appendChild(makeProjectCard(pr)));
-      if (emptyEl) emptyEl.hidden = list.length > 0;
+    // Paginated rendering: render PAGE cards at a time so we don't build every
+    // card (and request every image) at once. "Muat Lainnya" appends the next batch.
+    let currentList = [], shown = 0;
+
+    function renderMore() {
+      const old = document.getElementById('projectsMore');
+      if (old) old.remove();
+      if (shown >= currentList.length) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'products-more';
+      wrap.id = 'projectsMore';
+      const remaining = currentList.length - shown;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'products-show-more';
+      btn.innerHTML = `<span>Muat ${Math.min(PAGE, remaining)} Lainnya</span>` +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+      btn.addEventListener('click', appendNext);
+      wrap.appendChild(btn);
+      grid.after(wrap);
+    }
+
+    function appendNext() {
+      currentList.slice(shown, shown + PAGE).forEach(pr => grid.appendChild(makeProjectCard(pr)));
+      shown = Math.min(shown + PAGE, currentList.length);
       LazyImages.refresh();
+      renderMore();
+    }
+
+    function renderList(list) {
+      currentList = list;
+      shown = 0;
+      grid.innerHTML = '';
+      if (emptyEl) emptyEl.hidden = list.length > 0;
+      appendNext();
     }
 
     if (searchInput) {
