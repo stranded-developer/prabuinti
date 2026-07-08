@@ -328,9 +328,11 @@ const ProductDetail = (function () {
       'Halo, saya tertarik dengan produk ' + (product.name || '') + '. Boleh minta penawaran?'
     );
 
-    // Projects that use this product
+    // Projects that use this product (each has either a photo gallery or a video)
     projList.innerHTML = '';
-    const valid = (projects || []).filter(pr => pr && Array.isArray(pr.images) && pr.images.length);
+    const isVideoProj = pr => pr && pr.mediaType === 'video' && pr.video;
+    const valid = (projects || []).filter(pr =>
+      isVideoProj(pr) || (pr && Array.isArray(pr.images) && pr.images.length));
     if (valid.length) {
       valid.forEach(pr => {
         const block = document.createElement('div');
@@ -346,18 +348,32 @@ const ProductDetail = (function () {
 
         const gal = document.createElement('div');
         gal.className = 'pd-gallery';
-        pr.images.forEach((src, i) => {
+        if (isVideoProj(pr)) {
           const shot = document.createElement('div');
           shot.className = 'pd-shot pd-shot--link';
-          shot.style.animationDelay = Math.min(i * 60, 420) + 'ms';
-          const im = document.createElement('img');
-          im.src = src;
-          im.alt = pr.title || '';
-          im.loading = 'lazy';
-          shot.appendChild(im);
+          const v = document.createElement('video');
+          v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+          v.setAttribute('playsinline', '');
+          if (pr.videoPoster) v.poster = pr.videoPoster;
+          v.src = pr.video;
+          v.play().catch(() => {});
+          shot.appendChild(v);
           shot.addEventListener('click', goToProject);
           gal.appendChild(shot);
-        });
+        } else {
+          pr.images.forEach((src, i) => {
+            const shot = document.createElement('div');
+            shot.className = 'pd-shot pd-shot--link';
+            shot.style.animationDelay = Math.min(i * 60, 420) + 'ms';
+            const im = document.createElement('img');
+            im.src = src;
+            im.alt = pr.title || '';
+            im.loading = 'lazy';
+            shot.appendChild(im);
+            shot.addEventListener('click', goToProject);
+            gal.appendChild(shot);
+          });
+        }
 
         block.appendChild(h);
         block.appendChild(gal);
@@ -454,11 +470,26 @@ const ProjectDetail = (function () {
 
   function open(project) {
     const images = (Array.isArray(project.images) ? project.images : []).filter(Boolean);
+    const isVideo = project.mediaType === 'video' && project.video;
 
-    // Hero — clear any controls left over from a previous open.
+    // Hero — clear any controls/video left over from a previous open.
     const media = heroImg.parentElement;
     media.querySelectorAll('.prj-cz').forEach(el => el.remove());
-    if (images[0]) {
+    media.querySelectorAll('.prj-hero-video').forEach(el => el.remove());
+    if (isVideo) {
+      // Single autoplaying muted video (same cached URL as the grid card).
+      heroImg.removeAttribute('src');
+      heroImg.style.display = 'none';
+      const v = document.createElement('video');
+      v.className = 'prj-hero-video';
+      v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+      v.setAttribute('playsinline', ''); v.controls = true;
+      if (project.videoPoster) v.poster = project.videoPoster;
+      v.preload = 'auto';
+      v.src = project.video;
+      v.play().catch(() => {});
+      media.appendChild(v);
+    } else if (images[0]) {
       heroImg.src = images[0];
       heroImg.style.display = '';
     } else {
@@ -466,7 +497,7 @@ const ProjectDetail = (function () {
       heroImg.style.display = 'none';
     }
     heroImg.alt = project.title || '';
-    if (images.length > 1) buildHeroCarousel(media, images);
+    if (!isVideo && images.length > 1) buildHeroCarousel(media, images);
     nameEl.textContent = project.title || 'Proyek';
 
     // Meta — tahun + lokasi
@@ -535,6 +566,8 @@ const ProjectDetail = (function () {
     root.classList.remove('open');
     root.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    // Stop and drop any playing hero video so it doesn't keep buffering.
+    heroImg.parentElement.querySelectorAll('.prj-hero-video').forEach(v => { try { v.pause(); } catch {} v.remove(); });
     Lightbox.close();
     isOpen = false;
   }
@@ -664,6 +697,18 @@ async function renderProjectShowcase(portfolioFallback) {
 
   const PAGE = 6; // projects rendered per "Muat Lainnya" batch
 
+  // Only download + play a project video while its card is on screen, so the
+  // grid never fetches every video at once (same approach as the news marquee).
+  const videoIO = ('IntersectionObserver' in window)
+    ? new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          const v = e.target;
+          if (e.isIntersecting) { v.preload = 'auto'; v.play().catch(() => {}); }
+          else v.pause();
+        });
+      }, { rootMargin: '150px' })
+    : null;
+
   if (projects.length) {
     // Manual image carousel for a card: small prev/next buttons swap the cover.
     // Images load on demand (only when navigated to), not all upfront.
@@ -703,7 +748,22 @@ async function renderProjectShowcase(portfolioFallback) {
       card.className = 'project-card reveal visible';
       const images = (pr.images || []).filter(Boolean);
       const cover = images[0] || '';
-      if (cover) {
+      if (pr.mediaType === 'video' && pr.video) {
+        // Single muted, looping video — lazy-loads + autoplays only while on
+        // screen. The URL is immutably cached, so opening the detail (same URL)
+        // is instant.
+        const v = document.createElement('video');
+        v.muted = true; v.loop = true; v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        if (pr.videoPoster) v.poster = pr.videoPoster;
+        v.src = pr.video;
+        v.preload = 'none';
+        if (videoIO) videoIO.observe(v);
+        else { v.autoplay = true; v.play().catch(() => {}); }
+        card.appendChild(v);
+        // Warm the cache so the detail hero opens instantly.
+        card.addEventListener('pointerenter', () => { fetch(pr.video).catch(() => {}); }, { once: true });
+      } else if (cover) {
         const img = document.createElement('img');
         img.alt = pr.title || '';
         img.setAttribute('data-lazy-src', cover);

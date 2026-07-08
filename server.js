@@ -163,7 +163,7 @@ if (!fs.existsSync(CATEGORIES_FILE)) {
     { id: 4, name: 'Fiber Glass',        order: 4 },
     { id: 5, name: 'Insulasi',           order: 5 },
     { id: 6, name: 'Wiremesh',           order: 6 },
-    { id: 7, name: 'Alderon uPVC',       order: 7 },
+    { id: 7, name: 'Mattaka uPVC',       order: 7 },
   ]);
 }
 
@@ -1347,17 +1347,21 @@ app.post('/api/projects', requireAuth, async (req, res) => {
     const year        = req.body.year || '';
     const location    = req.body.location || '';
     const description = req.body.description || '';
+    // A project is either a photo carousel OR a single autoplaying video.
+    const mediaType   = req.body.mediaType === 'video' ? 'video' : 'carousel';
+    const video       = req.body.video || '';
+    const videoPoster = req.body.videoPoster || '';
     if (USE_FB) {
       const snap  = await _db.collection('projects').get();
       const maxId = snap.empty ? 0 : Math.max(...snap.docs.map(d => d.data().id || 0));
-      const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
+      const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, mediaType, images, video, videoPoster, productIds };
       await _db.collection('projects').doc(String(item.id)).set(item);
       await mirrorProjectToProducts(item.id, item.productIds, []);
       return res.status(201).json(item);
     }
     const list  = readLocalJSON(PROJECTS_FILE) || [];
     const maxId = list.reduce((m, p) => Math.max(m, p.id), 0);
-    const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, images, productIds };
+    const item  = { id: maxId + 1, title: req.body.title || '', year, location, description, mediaType, images, video, videoPoster, productIds };
     list.push(item);
     writeLocalJSON(PROJECTS_FILE, list);
     await mirrorProjectToProducts(item.id, item.productIds, []);
@@ -1373,6 +1377,9 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
     if (req.body.year !== undefined)         patch.year        = req.body.year;
     if (req.body.location !== undefined)     patch.location    = req.body.location;
     if (req.body.description !== undefined)  patch.description = req.body.description;
+    if (req.body.mediaType !== undefined)    patch.mediaType   = req.body.mediaType === 'video' ? 'video' : 'carousel';
+    if (req.body.video !== undefined)        patch.video       = req.body.video;
+    if (req.body.videoPoster !== undefined)  patch.videoPoster = req.body.videoPoster;
     if (Array.isArray(req.body.images))      patch.images   = req.body.images;
     if (Array.isArray(req.body.productIds))  patch.productIds = req.body.productIds;
     if (USE_FB) {
@@ -1388,6 +1395,9 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
         const gone = (prev.images || []).filter(u => !(updated.images || []).includes(u));
         for (const u of gone) await deleteImageByUrl(u);
       }
+      // Drop the old video/poster from storage if they were replaced or removed.
+      if (prev.video && prev.video !== updated.video) await deleteImageByUrl(prev.video);
+      if (prev.videoPoster && prev.videoPoster !== updated.videoPoster) await deleteImageByUrl(prev.videoPoster);
       return res.json(updated);
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
@@ -1402,6 +1412,8 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
       const gone = (prev.images || []).filter(u => !(list[idx].images || []).includes(u));
       for (const u of gone) await deleteImageByUrl(u);
     }
+    if (prev.video && prev.video !== list[idx].video) await deleteImageByUrl(prev.video);
+    if (prev.videoPoster && prev.videoPoster !== list[idx].videoPoster) await deleteImageByUrl(prev.videoPoster);
     res.json(list[idx]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1413,10 +1425,12 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
       const ref  = _db.collection('projects').doc(String(id));
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-      const { productIds, images } = snap.data();
+      const { productIds, images, video, videoPoster } = snap.data();
       await ref.delete();
       await mirrorProjectToProducts(id, [], productIds || []);
       for (const u of (images || [])) await deleteImageByUrl(u);
+      await deleteImageByUrl(video);
+      await deleteImageByUrl(videoPoster);
       return res.json({ ok: true });
     }
     const list = readLocalJSON(PROJECTS_FILE) || [];
@@ -1425,6 +1439,8 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
     writeLocalJSON(PROJECTS_FILE, list.filter(p => p.id !== id));
     await mirrorProjectToProducts(id, [], item.productIds || []);
     for (const u of (item.images || [])) await deleteImageByUrl(u);
+    await deleteImageByUrl(item.video);
+    await deleteImageByUrl(item.videoPoster);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

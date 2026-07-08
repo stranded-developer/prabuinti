@@ -1190,12 +1190,14 @@ body::before {
   background: var(--bg-card);
   border: 1px solid var(--border);
 }
-.project-card img {
+.project-card img,
+.project-card video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 500ms var(--ease-out);
 }
+.project-card video { display: block; }
 @media (hover: hover) and (pointer: fine) {
   .project-card:hover img { transform: scale(1.07); }
 }
@@ -2492,13 +2494,15 @@ body.preloading { overflow: hidden; }
    align-self:start lets the media keep its 4/3 height instead of being stretched
    to the (sometimes taller) text column beside it. */
 .pd-hero-media { position: relative; overflow: hidden; background: var(--bg-2); aspect-ratio: 4 / 3; align-self: start; }
-.pd-hero-media img {
+.pd-hero-media img,
+.pd-hero-media .prj-hero-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+.pd-hero-media .prj-hero-video { background: #000; z-index: 2; }
 /* Manual hero carousel controls (multi-image projects) */
 .prj-cz-nav {
   position: absolute;
@@ -2603,7 +2607,7 @@ body.preloading { overflow: hidden; }
   transform: translateY(18px) scale(0.98);
 }
 .pd.open .pd-shot { animation: pdUp 600ms var(--ease-out) forwards; }
-.pd-shot img { width: 100%; height: 100%; object-fit: cover; transition: transform 600ms var(--ease-out); }
+.pd-shot img, .pd-shot video { width: 100%; height: 100%; object-fit: cover; transition: transform 600ms var(--ease-out); }
 .pd-shot::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0); transition: background 250ms var(--ease-out); }
 .pd-shot:hover img { transform: scale(1.07); }
 .pd-shot:hover::after { background: rgba(0, 0, 0, 0.12); }

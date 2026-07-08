@@ -992,7 +992,7 @@
 
         <div class="hp-section">
           <div class="hp-section-hd">
-            <h2 class="hp-section-title">Produk Unggulan — Alderon</h2>
+            <h2 class="hp-section-title">Produk Unggulan — Mattaka</h2>
             <p class="hp-section-sub">Foto, judul, dan deskripsi yang tampil di bagian produk unggulan. Klik foto untuk mengganti.</p>
           </div>
           <div class="hp-img-grid" id="alderonImgGrid"></div>
@@ -1762,7 +1762,10 @@
         year: proj.year || '',
         location: proj.location || '',
         description: proj.description || '',
+        mediaType: proj.mediaType === 'video' ? 'video' : 'carousel',
         images: [...(proj.images || [])],
+        video: proj.video || '',
+        videoPoster: proj.videoPoster || '',
         productIds: [...(proj.productIds || [])].map(Number),
       };
 
@@ -1871,7 +1874,131 @@
         }
         card.classList.remove('proj-uploading');
         renderImgs();
+        updateHeader();
         fileInput.value = '';
+      });
+
+      // --- Media mode: a project is EITHER a photo carousel or one video ---
+      const mediaModeLabel = document.createElement('label');
+      mediaModeLabel.className = 'form-label';
+      mediaModeLabel.style.cssText = 'display:block;margin-top:16px;margin-bottom:6px;';
+      mediaModeLabel.textContent = 'Jenis Media';
+
+      const modeToggle = document.createElement('div');
+      modeToggle.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
+      const carouselModeBtn = document.createElement('button');
+      carouselModeBtn.type = 'button'; carouselModeBtn.className = 'btn-sm';
+      carouselModeBtn.textContent = '🖼️ Carousel Foto';
+      const videoModeBtn = document.createElement('button');
+      videoModeBtn.type = 'button'; videoModeBtn.className = 'btn-sm';
+      videoModeBtn.textContent = '🎬 Video';
+      modeToggle.appendChild(carouselModeBtn);
+      modeToggle.appendChild(videoModeBtn);
+
+      // Carousel (photos) section — wraps the file input + image grid built above.
+      const carouselSection = document.createElement('div');
+      carouselSection.appendChild(fileInput);
+      carouselSection.appendChild(imgsWrap);
+
+      // Video section — single autoplaying video, mirrors the news video flow.
+      const videoSection = document.createElement('div');
+      const videoInput = document.createElement('input');
+      videoInput.type = 'file'; videoInput.accept = 'video/mp4,video/*'; videoInput.style.display = 'none';
+
+      const videoPreview = document.createElement('div');
+      videoPreview.style.cssText = 'border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg);min-height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;';
+      function renderVideoPreview() {
+        videoPreview.innerHTML = '';
+        if (delVideoBtn) delVideoBtn.hidden = !state.video;
+        if (videoBtn) videoBtn.textContent = state.video ? '🎬 Ganti Video' : '🎬 Unggah Video';
+        if (!state.video) {
+          videoPreview.innerHTML = '<span style="color:var(--text-3);font-size:13px;padding:24px;">Belum ada video</span>';
+          return;
+        }
+        const v = document.createElement('video');
+        v.src = state.video; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+        if (state.videoPoster) v.poster = state.videoPoster;
+        v.style.cssText = 'width:100%;max-height:220px;object-fit:cover;';
+        v.play().catch(() => {});
+        videoPreview.appendChild(v);
+      }
+
+      // Upload/replace + delete buttons sit in a row under the preview.
+      const videoBtnRow = document.createElement('div');
+      videoBtnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+
+      const videoBtn = document.createElement('button');
+      videoBtn.type = 'button'; videoBtn.className = 'btn-sm';
+      videoBtn.style.cssText = 'padding:8px 16px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      videoBtn.textContent = '🎬 Unggah Video';
+      videoBtn.addEventListener('click', () => videoInput.click());
+
+      // Delete the video — clears it locally; the file is removed from
+      // penyimpanan (Storage) when the project is saved.
+      const delVideoBtn = document.createElement('button');
+      delVideoBtn.type = 'button'; delVideoBtn.className = 'btn-sm';
+      delVideoBtn.style.cssText = 'padding:8px 16px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:8px;';
+      delVideoBtn.textContent = '🗑️ Hapus Video';
+      delVideoBtn.hidden = true;
+      delVideoBtn.addEventListener('click', () => {
+        if (!state.video) return;
+        if (!confirm('Hapus video proyek ini? Video akan terhapus permanen dari penyimpanan saat proyek disimpan.')) return;
+        state.video = ''; state.videoPoster = '';
+        renderVideoPreview();
+        updateHeader();
+      });
+      videoInput.addEventListener('change', async () => {
+        const file = videoInput.files[0];
+        if (!file) return;
+        if (file.type && file.type !== 'video/mp4' && file.type !== 'video/webm') {
+          showToast('⚠️ Sebaiknya unggah MP4 — file .MOV/HEVC (mis. dari iPhone) sering gagal tampil di Chrome/Android', 'error');
+        }
+        card.classList.add('proj-uploading');
+        try {
+          // Capture the first frame as a poster (client-side) so cards show an
+          // instant image while the video lazy-loads on scroll.
+          let posterUrl = '';
+          try {
+            const posterBlob = await captureVideoPoster(file);
+            if (posterBlob) posterUrl = await uploadPoster(posterBlob);
+          } catch {}
+          const url = await uploadHeroVideo(file); // reuses signed/direct upload flow
+          if (url) { state.video = url; state.videoPoster = posterUrl; renderVideoPreview(); updateHeader(); }
+          else showToast('Gagal mengunggah video', 'error');
+        } catch { showToast('Gagal mengunggah video', 'error'); }
+        card.classList.remove('proj-uploading');
+        videoInput.value = '';
+      });
+      videoBtnRow.appendChild(videoBtn);
+      videoBtnRow.appendChild(delVideoBtn);
+      videoSection.appendChild(videoPreview);
+      videoSection.appendChild(videoBtnRow);
+      videoSection.appendChild(videoInput);
+      renderVideoPreview();
+
+      // Highlight the active mode and show only that section.
+      function applyMediaMode() {
+        const isVideo = state.mediaType === 'video';
+        carouselSection.hidden = isVideo;
+        videoSection.hidden = !isVideo;
+        carouselModeBtn.classList.toggle('btn-green', !isVideo);
+        videoModeBtn.classList.toggle('btn-green', isVideo);
+      }
+      // Switching mode discards the other type's media. Warn first (in Indonesian);
+      // the actual files are deleted from penyimpanan when the project is saved.
+      carouselModeBtn.addEventListener('click', () => {
+        if (state.mediaType === 'carousel') return;
+        if (state.video && !confirm('Beralih ke Carousel Foto akan menghapus video proyek ini. Video akan terhapus permanen dari penyimpanan saat disimpan. Lanjutkan?')) return;
+        state.video = ''; state.videoPoster = '';
+        state.mediaType = 'carousel';
+        renderVideoPreview(); applyMediaMode(); updateHeader();
+      });
+      videoModeBtn.addEventListener('click', () => {
+        if (state.mediaType === 'video') return;
+        if (state.images.length && !confirm('Beralih ke Video akan menghapus semua foto proyek ini. Foto akan terhapus permanen dari penyimpanan saat disimpan. Lanjutkan?')) return;
+        state.images = [];
+        state.mediaType = 'video';
+        renderImgs(); applyMediaMode(); updateHeader();
       });
 
       // Product picker — choose which products are used in this project
@@ -1962,11 +2089,12 @@
       const hTitle = hInfo.querySelector('.pch-title');
       const hMeta  = hInfo.querySelector('.pch-meta');
       function updateHeader() {
-        const cover = state.images[0];
+        const isVideo = state.mediaType === 'video';
+        const cover = isVideo ? (state.videoPoster || '') : state.images[0];
         if (cover) { hThumb.innerHTML = ''; hThumb.style.backgroundImage = `url("${cover}")`; hThumb.style.backgroundSize = 'cover'; hThumb.style.backgroundPosition = 'center'; }
-        else { hThumb.style.backgroundImage = ''; hThumb.textContent = 'PI'; }
+        else { hThumb.style.backgroundImage = ''; hThumb.textContent = isVideo ? '🎬' : 'PI'; }
         hTitle.textContent = state.title || 'Tanpa judul';
-        const bits = [state.images.length + ' foto'];
+        const bits = [isVideo ? (state.video ? 'Video' : 'Video (kosong)') : state.images.length + ' foto'];
         if (state.year) bits.push(state.year);
         if (state.location) bits.push(state.location);
         hMeta.textContent = bits.join(' · ');
@@ -1981,8 +2109,10 @@
       const body = document.createElement('div');
       body.className = 'proj-card-body';
       body.appendChild(top);
-      body.appendChild(fileInput);
-      body.appendChild(imgsWrap);
+      body.appendChild(mediaModeLabel);
+      body.appendChild(modeToggle);
+      body.appendChild(carouselSection);
+      body.appendChild(videoSection);
       body.appendChild(prodLabel);
       body.appendChild(prodSearch);
       body.appendChild(prodPicker);
@@ -1992,6 +2122,7 @@
       card.appendChild(header);
       card.appendChild(body);
       renderImgs();
+      applyMediaMode();
       updateHeader();
       return card;
     }
@@ -2004,7 +2135,7 @@
         const r = await fetch('/api/projects/' + state.id, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ title: state.title, year: state.year, location: state.location, description: state.description, images: state.images, productIds: state.productIds }),
+          body: JSON.stringify({ title: state.title, year: state.year, location: state.location, description: state.description, mediaType: state.mediaType, images: state.images, video: state.video, videoPoster: state.videoPoster, productIds: state.productIds }),
         });
         if (r.ok) {
           const updated = await r.json();
@@ -2034,7 +2165,7 @@
         const r = await fetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ title: '', images: [] }),
+          body: JSON.stringify({ title: '', mediaType: 'carousel', images: [] }),
         });
         if (r.ok) {
           const proj = await r.json();
@@ -3355,7 +3486,7 @@
     function renderAlderonSlot() {
       const grid = document.getElementById('alderonImgGrid');
       grid.innerHTML = '';
-      const slot = makeImgSlot(hpState.alderonImage || '', 'Foto Alderon', url => {
+      const slot = makeImgSlot(hpState.alderonImage || '', 'Foto Mattaka', url => {
         hpState.alderonImage = url;
       });
       grid.appendChild(slot);
