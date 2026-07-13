@@ -1,7 +1,7 @@
 {
   "name": "prabuinti",
   "version": "1.0.0",
-  "description": "PT. Prabu Inti Suksesindo — Perusahaan Serat Fiber Termaju di Indonesia",
+  "description": "PT. Prabu Inti Jaya — Perusahaan Serat Fiber Termaju di Indonesia",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

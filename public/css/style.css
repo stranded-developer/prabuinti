@@ -124,17 +124,17 @@ body::before {
   animation: fadeIn 400ms var(--ease-out) 50ms forwards;
 }
 .nav-logo-img {
-  height: 34px;
-  width: 34px;
+  height: 46px;
+  width: 46px;
   border-radius: var(--r-sm);
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
-  border: 1px solid var(--border-2);
 }
 .nav-logo-text {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
   line-height: 1;
 }
 .nav-logo-main {
@@ -1305,8 +1305,6 @@ body::before {
 .about-title em {
   font-style: normal;
   color: var(--accent);
-  display: inline-block;
-  margin-top: 0.15em;
 }
 /* Body: sticky aside + large editorial text */
 .about-body {
